@@ -1,0 +1,9 @@
+{
+  "name": "Kapit Launcher",
+  "description": "A KRunner/Ulauncher-style application launcher for GNOME Shell",
+  "uuid": "kapit-launcher@local",
+  "shell-version": ["48", "49"],
+  "version": 1,
+  "url": "",
+  "settings-schema": "org.gnome.shell.extensions.kapit-launcher"
+}
