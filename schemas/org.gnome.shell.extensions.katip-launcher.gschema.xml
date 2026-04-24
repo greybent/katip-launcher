@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.katip-launcher"
+          path="/org/gnome/shell/extensions/katip-launcher/">
+
+    <key name="toggle-launcher" type="as">
+      <default>['&lt;Control&gt;space']</default>
+      <summary>Shortcut to open/close the launcher</summary>
+    </key>
+
+    <key name="launcher-width" type="i">
+      <default>750</default>
+      <summary>Width of the launcher window in pixels</summary>
+    </key>
+    <key name="max-results" type="i">
+      <default>8</default>
+      <summary>Maximum number of results to display</summary>
+    </key>
+    <key name="show-overlay" type="b">
+      <default>true</default>
+      <summary>Show dark overlay behind the launcher window</summary>
+    </key>
+    <key name="show-panel-indicator" type="b">
+      <default>true</default>
+      <summary>Show Kapit icon in the top panel</summary>
+    </key>
+
+    <key name="enable-windows" type="b">
+      <default>true</default>
+      <summary>Show open windows in results</summary>
+    </key>
+    <key name="enable-clipboard" type="b">
+      <default>false</default>
+      <summary>Enable clipboard history provider (disabled by default)</summary>
+    </key>
+    <key name="clipboard-max-history" type="i">
+      <default>50</default>
+      <summary>Maximum number of clipboard history entries to keep</summary>
+    </key>
+    <key name="enable-apps" type="b">
+      <default>true</default>
+      <summary>Show installed applications in results</summary>
+    </key>
+    <key name="enable-files" type="b">
+      <default>true</default>
+      <summary>Show files in results</summary>
+    </key>
+    <key name="enable-process" type="b">
+      <default>false</default>
+      <summary>Enable process search provider (disabled by default, trigger: proc)</summary>
+    </key>
+    <key name="enable-calculator" type="b">
+      <default>true</default>
+      <summary>Show calculator results</summary>
+    </key>
+    <key name="enable-web" type="b">
+      <default>true</default>
+      <summary>Show web search result</summary>
+    </key>
+
+    <key name="file-search-paths" type="as">
+      <default>['~']</default>
+      <summary>Paths to search for files</summary>
+    </key>
+    <!-- Custom themes — JSON array of {name, base, overrides} objects -->
+    <key name="custom-themes" type="s">
+      <default>'[]'</default>
+      <summary>User-defined color themes (JSON)</summary>
+    </key>
+
+    <key name="scan-max-depth" type="i">
+      <default>4</default>
+      <summary>Max directory depth for filesystem scan on non-Tracker paths</summary>
+    </key>
+    <key name="scan-max-results" type="i">
+      <default>50</default>
+      <summary>Max file results per scanned path</summary>
+    </key>
+
+    <key name="web-search-engine" type="s">
+      <default>'https://duckduckgo.com/?q={query}'</default>
+      <summary>Web search engine URL template. Use {query} as placeholder.</summary>
+    </key>
+    <key name="web-search-label" type="s">
+      <default>'DuckDuckGo'</default>
+      <summary>Display name of the web search engine</summary>
+    </key>
+
+    <key name="terminal-app" type="s">
+      <default>'kgx'</default>
+      <summary>Terminal emulator binary to use for running commands</summary>
+    </key>
+
+    <!-- Text prefix character for inline provider filtering -->
+    <key name="text-prefix-char" type="s">
+      <default>'/'</default>
+      <summary>Character used to prefix provider filter keywords, e.g. /file, /app</summary>
+    </key>
+
+    <!-- Provider display order — JSON array of provider IDs -->
+    <key name="provider-order" type="s">
+      <default>'[]'</default>
+      <summary>Custom provider display order (JSON array of provider IDs)</summary>
+    </key>
+    <key name="results-recent-first" type="b">
+      <default>false</default>
+      <summary>Show most recently used results first when launcher opens</summary>
+    </key>
+
+    <!-- Appearance -->
+    <key name="color-theme" type="s">
+      <default>'dark'</default>
+      <summary>Color theme: 'system', 'dark', 'muted', 'light', 'soft', or 'pastel'</summary>
+    </key>
+    <key name="show-section-headers" type="b">
+      <default>true</default>
+      <summary>Show provider section headers between result groups</summary>
+    </key>
+
+    <!--
+      Shortcuts stored as JSON array of objects:
+      [
+        { "trigger": "gg",  "type": "open",   "url": "https://google.de",             "label": "Google" },
+        { "trigger": "aa",  "type": "search",  "url": "https://amazon.de/s?k={query}", "label": "Amazon" }
+      ]
+      type "open"   = standalone trigger, opens url directly
+      type "search" = trigger + space + term, substitutes {query} in url
+    -->
+    <key name="shortcuts" type="s">
+      <default>'[{&quot;trigger&quot;:&quot;gg&quot;,&quot;label&quot;:&quot;Google&quot;,&quot;type&quot;:&quot;search&quot;,&quot;url&quot;:&quot;https://google.de/search?q={query}&quot;},{&quot;trigger&quot;:&quot;aa&quot;,&quot;label&quot;:&quot;Amazon&quot;,&quot;type&quot;:&quot;search&quot;,&quot;url&quot;:&quot;https://www.amazon.de/s?k={query}&quot;},{&quot;trigger&quot;:&quot;dd&quot;,&quot;label&quot;:&quot;DuckDuckGo&quot;,&quot;type&quot;:&quot;search&quot;,&quot;url&quot;:&quot;https://duckduckgo.com/?q={query}&quot;},{&quot;trigger&quot;:&quot;ww&quot;,&quot;label&quot;:&quot;Wikipedia&quot;,&quot;type&quot;:&quot;search&quot;,&quot;url&quot;:&quot;https://en.wikipedia.org/w/index.php?search={query}&quot;}]'</default>
+      <summary>Custom launch shortcuts (JSON)</summary>
+    </key>
+
+  </schema>
+</schemalist>
