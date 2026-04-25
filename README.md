@@ -10,6 +10,16 @@ A fast, keyboard-driven launcher for GNOME Shell 45+ — search apps, files, win
 
 ---
 
+## Preview
+
+<video src="https://github.com/greybent/katip-launcher/releases/download/v76/katip-launcher-showcase-01.mp4" controls width="100%"></video>
+
+<video src="https://github.com/greybent/katip-launcher/releases/download/v76/katip-launcher-showcase-02.mp4" controls width="100%"></video>
+
+<video src="https://github.com/greybent/katip-launcher/releases/download/v76/katip-launcher-showcase-03.mp4" controls width="100%"></video>
+
+---
+
 ## Requirements
 
 - GNOME Shell 45 or newer
