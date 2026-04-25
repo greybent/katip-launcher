@@ -12,11 +12,11 @@ A fast, keyboard-driven launcher for GNOME Shell 45+ — search apps, files, win
 
 ## Preview
 
-<video src="https://github.com/greybent/katip-launcher/releases/download/v76/katip-launcher-showcase-01.mp4" controls width="100%"></video>
+<video src="https://github.com/user-attachments/assets/a20aa84c-0b18-4eea-b42e-7164789d1342" controls width="100%"></video>
 
-<video src="https://github.com/greybent/katip-launcher/releases/download/v76/katip-launcher-showcase-02.mp4" controls width="100%"></video>
+<video src="https://github.com/user-attachments/assets/87be1356-e1f0-4dac-8449-779284041c1c" controls width="100%"></video>
 
-<video src="https://github.com/greybent/katip-launcher/releases/download/v76/katip-launcher-showcase-03.mp4" controls width="100%"></video>
+<video src="https://github.com/user-attachments/assets/c86ec648-3c87-47bf-89cf-480a836b4ad6" controls width="100%"></video>
 
 ---
 
