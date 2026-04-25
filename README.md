@@ -6,6 +6,17 @@ A fast, keyboard-driven launcher for GNOME Shell 45+ — search apps, files, win
 
 > Developed with [Claude](https://claude.ai) (Anthropic). Released under the MIT License.
 > Source code: [github.com/greybent/katip-launcher](https://github.com/greybent/katip-launcher)
+> Blog post: [Katip Launcher — a KRunner-like Launcher for GNOME 3/v40 (Vibe Coding with Claude AI)](https://random-it-blog.de/fedora/katip-launcher-a-krunner-like-launcher-for-gnome-3-v40-vibe-coding-claude-ai/)
+
+---
+
+## Preview
+
+<video src="https://github.com/user-attachments/assets/a20aa84c-0b18-4eea-b42e-7164789d1342" controls width="100%"></video>
+
+<video src="https://github.com/user-attachments/assets/87be1356-e1f0-4dac-8449-779284041c1c" controls width="100%"></video>
+
+<video src="https://github.com/user-attachments/assets/c86ec648-3c87-47bf-89cf-480a836b4ad6" controls width="100%"></video>
 
 ---
 
