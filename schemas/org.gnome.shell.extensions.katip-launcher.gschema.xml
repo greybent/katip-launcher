@@ -87,7 +87,7 @@
     </key>
 
     <key name="terminal-app" type="s">
-      <default>'kgx'</default>
+      <default>'ptyxis'</default>
       <summary>Terminal emulator binary to use for running commands</summary>
     </key>
 
@@ -105,6 +105,32 @@
     <key name="results-recent-first" type="b">
       <default>false</default>
       <summary>Show most recently used results first when launcher opens</summary>
+    </key>
+
+    <!-- Handwriting recognition -->
+    <key name="handwriting-enabled" type="b">
+      <default>false</default>
+      <summary>Show handwriting canvas when stylus is detected</summary>
+    </key>
+    <key name="handwriting-backend" type="s">
+      <default>'tesseract'</default>
+      <summary>Recognition backend: tesseract, google, myscript</summary>
+    </key>
+    <key name="handwriting-language" type="s">
+      <default>'auto'</default>
+      <summary>Language for handwriting recognition (auto, en, de, fr, es, it, nl)</summary>
+    </key>
+    <key name="handwriting-append" type="b">
+      <default>false</default>
+      <summary>Append recognised text to search field instead of replacing it</summary>
+    </key>
+    <key name="handwriting-myscript-app-key" type="s">
+      <default>''</default>
+      <summary>MyScript iink application key</summary>
+    </key>
+    <key name="handwriting-myscript-hmac-key" type="s">
+      <default>''</default>
+      <summary>MyScript iink HMAC key</summary>
     </key>
 
     <!-- Appearance -->

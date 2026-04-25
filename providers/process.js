@@ -82,7 +82,7 @@ export class ProcessProvider extends BaseProvider {
     _showDetails(pid) {
         try {
             if (!/^\d+$/.test(pid)) return; // safety guard
-            const terminal = this._settings.get_string('terminal-app') || 'kgx';
+            const terminal = this._settings.get_string('terminal-app') || 'ptyxis';
             Gio.Subprocess.new(
                 [terminal, '-e', `bash -c 'ps -p ${pid} -f; echo; cat /proc/${pid}/status 2>/dev/null; exec bash'`],
                 Gio.SubprocessFlags.NONE

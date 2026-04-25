@@ -1,6 +1,19 @@
 # Changelog
 
-## v74 (current)
+## v76 (current)
+
+- **Fix:** Typo "Kapit" → "Katip" in clipboard watcher console warning
+- **Fix:** Handwriting canvas `destroy()` now nulls `onTextRecognised` and `onCanvasHidden` callbacks before tearing down widgets — prevents in-flight async recognition callbacks from touching already-destroyed objects
+- **Fix:** `_borderBox` and `_drawArea` explicitly nulled in `destroy()`; separate `destroyBorderBox()` method removed (merged into `destroy()`)
+- **Fix:** `_drawArea.queue_repaint()` made null-safe (`_drawArea?.queue_repaint()`)
+- **Fix:** `hwCanvas._borderBox` null-checked before `removeChrome` call in `extension.js`
+- **Fix:** `PROXIMITY_IN` / `PROXIMITY_OUT` defined as named constants instead of magic numbers 16/17
+- **Fix:** System theme watcher uses `_desktopSettings` reference consistently throughout
+- **Fix:** Null guard added before system theme watcher setup
+- **Fix:** Stale `_settingsIds` array initialisation removed from `extension.js`
+- **Fix:** `_hwCanvas` nulled after destroy in launcher cleanup
+
+## v74
 
 - **Fix:** `imports.gi.Tracker` replaced with ESM dynamic `import()` per GNOME 45+ guidelines
 - **Fix:** `Gio.Settings` for system theme now cached and ref-counted instead of created on every launcher open

@@ -6,7 +6,6 @@
 import { BaseProvider } from './base.js';
 import * as fuzzy from '../ui/fuzzy.js';
 import Shell from 'gi://Shell';
-import Gio from 'gi://Gio';
 
 export class AppsProvider extends BaseProvider {
     get id()       { return 'apps'; }
@@ -19,25 +18,24 @@ export class AppsProvider extends BaseProvider {
     }
 
     query(text) {
-        const results = [];
         const apps = this._appSystem.get_installed();
+        const results = [];
 
         for (const app of apps) {
             const name = app.get_name() ?? '';
             if (!name) continue;
 
-            const appInfo     = app.app_info;
+            const appInfo = app.app_info;
+            if (appInfo?.get_nodisplay()) continue;
+
+            const appId      = app.get_id() ?? '';
+            const executable = appInfo?.get_executable() ?? '';
+
             const description = appInfo?.get_description() ?? '';
             const keywords    = appInfo?.get_keywords()?.join(' ') ?? '';
-            const nodisplay   = appInfo?.get_nodisplay() ?? false;
+            const combined    = `${name} ${description} ${keywords}`;
 
-            if (nodisplay) continue;
-
-            const combined = `${name} ${description} ${keywords}`;
             if (text.length > 0 && !fuzzy.match(text, combined)) continue;
-
-            const executable = appInfo?.get_executable() ?? '';
-            const appId = app.get_id() ?? '';
 
             results.push({
                 id:         `app:${appId}`,
@@ -48,23 +46,16 @@ export class AppsProvider extends BaseProvider {
                 badgeLabel: 'app',
                 badgeStyle: 'blue',
                 activate:   () => {
-                    // Re-lookup the app at activation time so we always
-                    // get the current running state, not the stale query-time one.
                     const freshApp = this._appSystem.lookup_app(appId);
                     if (!freshApp) {
-                        // Fallback: launch via Gio directly
-                        if (appInfo)
-                            appInfo.launch(null, null);
+                        appInfo?.launch(null, null);
                         return;
                     }
-
                     const state = freshApp.get_state();
-                    if (state === Shell.AppState.RUNNING) {
+                    if (state === Shell.AppState.RUNNING)
                         freshApp.activate();
-                    } else {
-                        // launch_action with no action name = default launch
+                    else
                         freshApp.launch(0, -1, Shell.AppLaunchGpu.APP_PREF);
-                    }
                 },
             });
         }
