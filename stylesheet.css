@@ -1,0 +1,120 @@
+/*
+ * Katip Launcher — stylesheet.css
+ * Structure and layout only. Colors are applied inline from JS
+ * based on the selected theme, since St CSS descendant selectors
+ * are unreliable across actor subtree boundaries in GNOME Shell.
+ */
+
+/* ── Launcher container ──────────────────────────────────────────────────── */
+
+.katip-launcher {
+    border-radius: 12px;
+    padding: 0px;
+}
+
+/* ── Search bar ──────────────────────────────────────────────────────────── */
+
+.kapit-search-row {
+    padding: 12px 14px;
+    spacing: 6px;
+}
+
+.kapit-search-entry {
+    font-size: 16px;
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+
+.kapit-search-entry:focus {
+    box-shadow: none;
+    border: none;
+}
+
+/* ── Mode chips ──────────────────────────────────────────────────────────── */
+
+.kapit-chip-row {
+    padding: 6px 14px;
+    spacing: 6px;
+}
+
+.kapit-chip {
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 12px;
+}
+
+/* ── Results list ────────────────────────────────────────────────────────── */
+
+.kapit-results-box {
+    padding: 4px 0;
+    spacing: 0px;
+}
+
+/* ── Section headers ─────────────────────────────────────────────────────── */
+
+.kapit-section-header {
+    padding: 6px 16px 2px;
+    spacing: 8px;
+}
+
+.kapit-section-label {
+    font-size: 11px;
+}
+
+.kapit-section-line {
+    min-height: 1px;
+}
+
+/* ── Individual result row ───────────────────────────────────────────────── */
+
+.kapit-result-item {
+    padding: 8px 14px;
+    spacing: 0px;
+    border-radius: 0px;
+}
+
+.kapit-result-icon {
+    min-width: 36px;
+    min-height: 36px;
+    border-radius: 8px;
+    padding: 6px;
+}
+
+.kapit-result-title {
+    font-size: 14px;
+    font-weight: bold;
+    padding: 0 8px;
+}
+
+.kapit-result-subtitle {
+    font-size: 12px;
+    padding: 1px 8px 0;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+
+.kapit-footer {
+    padding: 7px 14px;
+    border-radius: 0 0 12px 12px;
+    spacing: 0px;
+}
+
+/* ── Keyboard hint pills ─────────────────────────────────────────────────── */
+
+.kapit-kbd-hint {
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 11px;
+}
+
+/* ── Settings button ─────────────────────────────────────────────────────── */
+
+.kapit-settings-btn {
+    border-radius: 6px;
+    padding: 4px 5px;
+    margin-left: 4px;
+    background-color: transparent;
+    border: none;
+}
