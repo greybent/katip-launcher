@@ -18,7 +18,7 @@ const TRIGGER = 'shell ';
  *   shell htop             → auto-detects no display, opens in terminal
  *   Ctrl+Enter on result   → always force-open in terminal
  *
- * Terminal is read from the 'terminal-app' GSettings key (default: kgx).
+ * Terminal is read from the 'terminal-app' GSettings key (default: ptyxis).
  */
 export class CommandProvider extends BaseProvider {
     get id()       { return 'command'; }
@@ -32,7 +32,7 @@ export class CommandProvider extends BaseProvider {
         const cmd = trimmed.slice(TRIGGER.length).trim();
         if (!cmd) return [];
 
-        const terminal = this._settings.get_string('terminal-app') || 'kgx';
+        const terminal = this._settings.get_string('terminal-app') || 'ptyxis';
         const needsTerm = this._likelyNeedsTerminal(cmd);
 
         return [{
@@ -109,7 +109,7 @@ export class CommandProvider extends BaseProvider {
         } catch (e) {
             console.warn('[Kapit] CommandProvider silent launch failed:', e.message);
             // Fallback to terminal
-            const terminal = this._settings.get_string('terminal-app') || 'kgx';
+            const terminal = this._settings.get_string('terminal-app') || 'ptyxis';
             this._runInTerminal(cmd, terminal);
         }
     }

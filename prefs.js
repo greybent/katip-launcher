@@ -533,7 +533,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
             title: 'Terminal binary',
             show_apply_button: true,
         });
-        termRow.set_tooltip_text('Name or full path of the terminal app, e.g. kgx, gnome-terminal, alacritty');
+        termRow.set_tooltip_text('Name or full path of the terminal app, e.g. ptyxis, kgx, gnome-terminal, alacritty');
         termRow.set_text(settings.get_string('terminal-app') ?? 'kgx');
         termRow.connect('apply', () => settings.set_string('terminal-app', termRow.get_text().trim() || 'kgx'));
         settings.connect('changed::terminal-app', () => {
@@ -558,6 +558,125 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
         });
         window.add(themesPage);
         this._buildCustomThemesEditor(themesPage, settings);
+
+        // ── Page: Handwriting ─────────────────────────────────────────────
+        const hwPage = new Adw.PreferencesPage({
+            title: 'Handwriting',
+            icon_name: 'input-tablet-symbolic',
+        });
+        window.add(hwPage);
+
+        const hwGeneralGroup = new Adw.PreferencesGroup({
+            title: 'General',
+            description: 'Transparent writing overlay over the search field when a stylus is detected. Disabled by default.',
+        });
+        hwPage.add(hwGeneralGroup);
+
+        const hwEnabledRow = new Adw.SwitchRow({
+            title: 'Enable handwriting input',
+            subtitle: 'Show writing overlay when a stylus pen is detected',
+        });
+        settings.bind('handwriting-enabled', hwEnabledRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        hwGeneralGroup.add(hwEnabledRow);
+
+        const hwAppendRow = new Adw.SwitchRow({
+            title: 'Append recognised text',
+            subtitle: 'Add after existing search content instead of replacing it',
+        });
+        settings.bind('handwriting-append', hwAppendRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        hwGeneralGroup.add(hwAppendRow);
+
+        const hwLangGroup = new Adw.PreferencesGroup({ title: 'Language' });
+        hwPage.add(hwLangGroup);
+
+        const hwLangRow = new Adw.ActionRow({
+            title: 'Recognition language',
+            subtitle: 'Language sent to the recognition backend',
+        });
+        const hwLangCombo = new Gtk.DropDown({
+            valign: Gtk.Align.CENTER,
+            model: Gtk.StringList.new([
+                'Auto (system language)', 'English', 'German',
+                'French', 'Spanish', 'Italian', 'Dutch',
+            ]),
+        });
+        const HW_LANG_MAP = ['auto', 'en', 'de', 'fr', 'es', 'it', 'nl'];
+        hwLangCombo.set_selected(Math.max(0, HW_LANG_MAP.indexOf(
+            settings.get_string('handwriting-language') ?? 'auto')));
+        hwLangCombo.connect('notify::selected', () =>
+            settings.set_string('handwriting-language', HW_LANG_MAP[hwLangCombo.get_selected()] ?? 'auto'));
+        settings.connect('changed::handwriting-language', () => {
+            const idx = HW_LANG_MAP.indexOf(settings.get_string('handwriting-language') ?? 'auto');
+            if (idx >= 0 && hwLangCombo.get_selected() !== idx) hwLangCombo.set_selected(idx);
+        });
+        hwLangRow.add_suffix(hwLangCombo);
+        hwLangGroup.add(hwLangRow);
+
+        const hwBackendGroup = new Adw.PreferencesGroup({ title: 'Recognition backend' });
+        hwPage.add(hwBackendGroup);
+
+        const HW_BACKENDS      = ['tesseract', 'google', 'myscript'];
+        const HW_BACKEND_NAMES = [
+            'Tesseract (offline)',
+            'Google Input Tools (online)',
+            'MyScript iink (online)',
+        ];
+        const hwBackendRow = new Adw.ActionRow({
+            title: 'Backend',
+            subtitle: 'Tesseract runs locally. Google and MyScript send data to external servers.',
+        });
+        const hwBackendCombo = new Gtk.DropDown({
+            valign: Gtk.Align.CENTER,
+            model: Gtk.StringList.new(HW_BACKEND_NAMES),
+        });
+        hwBackendCombo.set_selected(Math.max(0, HW_BACKENDS.indexOf(
+            settings.get_string('handwriting-backend') ?? 'tesseract')));
+        hwBackendCombo.connect('notify::selected', () =>
+            settings.set_string('handwriting-backend', HW_BACKENDS[hwBackendCombo.get_selected()] ?? 'tesseract'));
+        settings.connect('changed::handwriting-backend', () => {
+            const idx = HW_BACKENDS.indexOf(settings.get_string('handwriting-backend') ?? 'tesseract');
+            if (idx >= 0 && hwBackendCombo.get_selected() !== idx) hwBackendCombo.set_selected(idx);
+        });
+        hwBackendRow.add_suffix(hwBackendCombo);
+        hwBackendGroup.add(hwBackendRow);
+
+        const hwTesseractGroup = new Adw.PreferencesGroup({
+            title: 'Tesseract',
+            description: 'Fully offline — no data leaves your device. Requires: sudo dnf install tesseract. Note: optimised for printed text, accuracy ~60–70% for handwriting.',
+        });
+        hwPage.add(hwTesseractGroup);
+
+        const hwGoogleGroup = new Adw.PreferencesGroup({
+            title: 'Google Input Tools',
+            description: '⚠ Unofficial endpoint. No API key required. Stroke data sent to Google servers without an official agreement or privacy guarantee.',
+        });
+        hwPage.add(hwGoogleGroup);
+
+        const hwMyScriptGroup = new Adw.PreferencesGroup({
+            title: 'MyScript iink',
+            description: 'High-accuracy online recognition. Free tier: 2000 recognitions/month. GDPR-compliant. Get API keys at: developer.myscript.com',
+        });
+        hwPage.add(hwMyScriptGroup);
+
+        const hwAppKeyRow = new Adw.EntryRow({ title: 'Application key', show_apply_button: true });
+        hwAppKeyRow.set_text(settings.get_string('handwriting-myscript-app-key') ?? '');
+        hwAppKeyRow.connect('apply', () =>
+            settings.set_string('handwriting-myscript-app-key', hwAppKeyRow.get_text().trim()));
+        settings.connect('changed::handwriting-myscript-app-key', () => {
+            const v = settings.get_string('handwriting-myscript-app-key') ?? '';
+            if (hwAppKeyRow.get_text() !== v) hwAppKeyRow.set_text(v);
+        });
+        hwMyScriptGroup.add(hwAppKeyRow);
+
+        const hwHmacKeyRow = new Adw.EntryRow({ title: 'HMAC key', show_apply_button: true });
+        hwHmacKeyRow.set_text(settings.get_string('handwriting-myscript-hmac-key') ?? '');
+        hwHmacKeyRow.connect('apply', () =>
+            settings.set_string('handwriting-myscript-hmac-key', hwHmacKeyRow.get_text().trim()));
+        settings.connect('changed::handwriting-myscript-hmac-key', () => {
+            const v = settings.get_string('handwriting-myscript-hmac-key') ?? '';
+            if (hwHmacKeyRow.get_text() !== v) hwHmacKeyRow.set_text(v);
+        });
+        hwMyScriptGroup.add(hwHmacKeyRow);
     }
 
     // ── Paths editor ──────────────────────────────────────────────────────

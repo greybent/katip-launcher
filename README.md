@@ -1,10 +1,21 @@
 # Katip Launcher
 
-A fast, keyboard-driven launcher for GNOME Shell — search apps, files, run commands, do math and more from a single shortcut.
+A fast, keyboard-driven launcher for GNOME Shell 45+ — search apps, files, windows and clipboard history, run commands, do math, set timers and more, all from a single shortcut.
 
 **Default shortcut:** `Ctrl+Space`
 
 > Developed with [Claude](https://claude.ai) (Anthropic). Released under the MIT License.
+> Source code: [github.com/greybent/katip-launcher](https://github.com/greybent/katip-launcher)
+> Blog post: [Katip Launcher — a KRunner-like Launcher for GNOME 3/v40 (Vibe Coding with Claude AI)](https://random-it-blog.de/fedora/katip-launcher-a-krunner-like-launcher-for-gnome-3-v40-vibe-coding-claude-ai/)
+
+---
+
+## Requirements
+
+- GNOME Shell 45 or newer
+- Wayland or X11
+- Fedora 41+ (other distributions with GNOME Shell 45+ should work)
+- `tinysparql` for file search (`sudo dnf install tinysparql`)
 
 ---
 
@@ -15,13 +26,13 @@ chmod +x install.sh uninstall.sh
 ./install.sh
 ```
 
-Log out and back in (required on Wayland), then enable:
+Log out and back in (required on Wayland for schema registration), then enable:
 
 ```bash
 gnome-extensions enable katip-launcher@local
 ```
 
-To open settings at any time:
+To open settings:
 
 ```bash
 gnome-extensions prefs katip-launcher@local
@@ -42,118 +53,112 @@ gnome-extensions disable katip-launcher@local
 gnome-extensions enable katip-launcher@local
 ```
 
-If the update includes a schema change (noted in the release), log out and back in instead of just disabling/enabling.
+If the update includes a schema change (noted in the release), log out and back in instead of disabling/enabling. The install script detects this automatically and warns you.
 
 ---
 
-## What you can do
+## Features
 
 ### Search and launch
-Type anything to search across all categories at once. Results are ranked by how often you use them — the more you launch something, the higher it appears.
+Type anything to search across all categories simultaneously. Results are ranked by how often you use them — the more you launch something, the higher it appears.
 
 ### Filter by category
-Click one of the filter chips at the top of the launcher, or type a keyword followed by a space to filter inline:
+Click a filter chip at the top of the launcher, or type a keyword followed by a space:
 
 | Type this | Shows only |
 |---|---|
 | `file budget` | Files matching "budget" |
-| `files budget` | Files matching "budget" |
 | `window firefox` | Open windows matching "firefox" |
 | `win teams` | Open windows matching "teams" |
-| `app calc` | Applications matching "calc" |
-| `apps gnome` | Applications matching "gnome" |
+| `app gnome` | Applications matching "gnome" |
 | `clip password` | Clipboard entries containing "password" |
-| `clipboard hello` | Clipboard entries containing "hello" |
-| `/web rust news` | Web search results only |
-| `/search rust news` | Web search results only |
+| `/web rust news` | Web search only |
+| `/search rust news` | Web search only |
 
-You can change the prefix character (default `/`) in Settings → General → Text prefix filter.
+The prefix character (default `/`) is configurable in Settings → General.
 
-### Run shell commands
+### Shell commands
 Type `shell ` followed by any command:
 
 | Type this | What happens |
 |---|---|
 | `shell firefox` | Launches Firefox silently |
 | `shell htop` | Opens htop in your terminal |
-| `shell ls -la ~/Documents` | Opens a terminal and runs the command |
+| `shell ls -la ~/Documents` | Runs command in terminal |
 
-Press **Enter** to run. Press **Ctrl+Enter** to run and keep the terminal open after the command finishes — useful for reading output.
+**Enter** — run. **Ctrl+Enter** — run and keep terminal open after the command finishes.
 
 ### Calculator
-Type any math expression directly:
+Type any math expression directly — no trigger needed:
 
 ```
-5 * 1.19
-sqrt(144)
-sin(pi/2)
-(100 + 50) / 3
+5 * 1.19    sqrt(144)    sin(pi/2)    (100 + 50) / 3
 ```
 
-Press Enter to copy the result to the clipboard.
+Press Enter to copy the result to clipboard.
 
 ### Unit conversion
 Type a conversion in plain language:
 
 ```
-100 km to miles
-32 F to C
-1.5 kg to lbs
-1 GB to MB
-100 bar to psi
+100 km to miles    32 F to C    1.5 kg to lbs    1 GB to MB    100 bar to psi
 ```
 
-Supported categories: length, mass, temperature, speed, volume, data and pressure.
+Supported: length, mass, temperature, speed, volume, data, pressure.
 
 ### Web search
-Type anything and a web search result appears at the bottom. Press Enter to open it in your browser. The search engine is configurable in Settings → Web (DuckDuckGo by default).
-
-Type a URL or domain directly (e.g. `github.com`) to open it without going through a search engine.
+A web search result appears automatically at the bottom of every search. Press Enter to open it in your browser. The search engine is configurable (DuckDuckGo by default). Type a domain like `github.com` to open it directly.
 
 ### Custom shortcuts
-Create your own quick-launch triggers in Settings → Shortcuts:
+Create quick-launch triggers in Settings → Shortcuts. 18 are included by default:
 
-| Type this | What happens |
+| Trigger | Action |
 |---|---|
-| `gg linux tips` | Searches Google for "linux tips" |
-| `gh kapit` | Searches GitHub for "kapit" |
-| `cal` | Opens Google Calendar |
+| `gg linux tips` | Google search |
+| `gh katip` | GitHub search |
+| `yt lofi` | YouTube search |
+| `cal` | Google Calendar |
+| `so python list` | Stack Overflow search |
 
-18 shortcuts are included by default covering search engines, development tools and general use.
-
-### GNOME Settings panels
-Type `settings ` followed by a panel name to jump directly to any GNOME Settings page:
+### GNOME Settings
+Type `settings ` followed by a panel name:
 
 ```
-settings wifi
-settings display
-settings bluetooth
-settings users
-settings keyboard
+settings wifi    settings display    settings bluetooth    settings users
 ```
 
 ### Timers
-Type `timer ` followed by a duration to set a desktop notification:
+Type `timer ` followed by a duration and optional label:
 
 ```
-timer 25m
-timer 1h30m standup
-timer 90s
+timer 25m    timer 1h30m standup    timer 90s    timer 2h deep work
 ```
 
-The notification fires when the time is up. You can include a label (like "standup") and it will appear in the notification title.
+A desktop notification fires when the time is up.
 
 ### Clipboard history *(optional, off by default)*
-Enable in Settings → Providers. Kapit watches your clipboard in the background and builds a searchable history. Type `clip` or `clipboard` followed by a search term to filter entries. Press Enter to copy an entry back to the clipboard.
+Enable in Settings → Providers. Katip watches your clipboard in the background every 3 seconds and builds a searchable history (up to 50 entries by default, configurable).
 
-**Managing entries:**
-- `Delete` key — removes the selected entry from history permanently
-- `Ctrl+Enter` — toggles private mode on the entry. Private entries show `••••••••` instead of their content so passwords and sensitive text are hidden from view. The entry still works normally — you can still find it by searching and copy it with Enter. Press `Ctrl+Enter` again to reveal it.
+Type `clip` or `clipboard` to filter entries. Press Enter to copy an entry back to the clipboard.
 
-History size (default 50) and the polling interval are configurable in Settings → Providers.
+- **Delete** key — removes the selected entry permanently
+- **Ctrl+Enter** — toggles private mode. Private entries show `••••••••` instead of their content, protecting passwords and sensitive text. The entry still copies normally. Press Ctrl+Enter again to reveal.
 
 ### Process search *(optional, off by default)*
-Enable in Settings → Providers. Type `proc ` followed by a process name to list matching running processes. Press Enter to send a stop signal, or Ctrl+Enter to open a terminal with details.
+Enable in Settings → Providers. Type `proc ` followed by a process name. Press Enter to send SIGTERM, Ctrl+Enter to open a terminal with process details.
+
+### Handwriting input *(stylus only)*
+When a stylus pen is detected, a transparent writing overlay appears over the search field. Write directly on the search bar — ink strokes appear in real time. After a short pause, the handwriting is recognised and inserted into the search field.
+
+Scribble back and forth horizontally to clear the canvas. Move the stylus away from the screen to dismiss the overlay.
+
+Configure in Settings → General → Handwriting recognition: enable/disable, append vs replace mode, recognition language.
+
+> **Privacy note:** Handwriting recognition uses an unofficial Google Input Tools endpoint
+> (`inputtools.google.com`). Stroke data (vector coordinates, not images) is sent to
+> Google's servers for recognition. This is the same endpoint used by Google's own
+> handwriting demo page. There is no official API agreement or privacy guarantee.
+> If this is a concern, disable handwriting input in Settings → General.
 
 ---
 
@@ -161,40 +166,40 @@ Enable in Settings → Providers. Type `proc ` followed by a process name to lis
 
 | Key | Action |
 |---|---|
-| `Ctrl+Space` | Open / close launcher (configurable) |
+| `Ctrl+Space` | Open / close (configurable) |
 | `↑ / ↓` | Navigate results |
-| `Enter` | Open / launch selected result |
-| `Ctrl+Enter` | Alternative action (open folder for files, keep terminal open for commands, toggle private for clipboard) |
-| `Delete` | Remove selected clipboard entry from history |
-| `Tab` | Cycle through category filter chips |
+| `Enter` | Open / launch |
+| `Ctrl+Enter` | Alternative action (open folder, keep terminal open, toggle clipboard private) |
+| `Delete` | Remove clipboard entry from history |
+| `Tab` | Cycle category chips |
 | `Escape` or `Super` | Close launcher |
 
 ---
 
 ## Appearance
 
-Choose from six built-in color themes in Settings → General:
+Six built-in themes in Settings → General:
 
-- **System** — follows your GNOME accent color and dark/light mode setting, updates live
+- **System** — follows your GNOME accent color and dark/light setting, updates live
 - **Dark** — deep blue-dark with blue accents
 - **Muted** — warm brown-dark with amber accents
 - **Light** — clean white with blue accents
-- **Soft** — near-black with green accents, minimal chip styling
+- **Soft** — near-black with green accents
 - **Pastel** — warm off-white with soft purple accents
 
-You can also create your own themes in Settings → Custom Themes by choosing a base theme and overriding individual colors.
+Create custom themes in Settings → Custom Themes.
 
 ---
 
 ## Result ordering
 
-**Category order** — Settings → Providers → Display order lets you reorder which category appears first when the launcher opens. Use the ↑ ↓ buttons to arrange categories to your preference. Changes take effect on the next launcher open.
+**Category order** — Settings → Providers → Display order. Use ↑ ↓ buttons to arrange which category appears first.
 
-**Most recently used first** — a toggle in the same section. When enabled, the launcher ignores category order entirely when the search box is empty and sorts everything by your personal usage history instead — whatever you used most recently appears at the top. As soon as you start typing, normal search scoring takes over.
+**Most recently used first** — toggle in the same section. Sorts by personal usage history when the search box is empty. Normal search scoring resumes when you start typing.
 
 ---
 
-## File search prerequisites
+## File search
 
 File search uses GNOME's built-in file indexer. On Fedora 41+:
 
@@ -208,7 +213,7 @@ On Fedora 38–40:
 sudo dnf install tracker tracker-miners
 ```
 
-Files outside your home directory (such as network shares) are searched directly without the indexer — you can add extra search paths in Settings → Files.
+Files outside your home directory are searched directly — add extra paths in Settings → Files.
 
 ---
 

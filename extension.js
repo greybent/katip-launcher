@@ -39,7 +39,6 @@ export default class KatipLauncher extends Extension {
 
         // Start background clipboard watcher if the provider is enabled
         this._startClipboardWatcher();
-        this._settingsIds = [];
         this._settingsIds.push(
             this._settings.connect('changed::enable-clipboard', () => {
                 if (this._settings.get_boolean('enable-clipboard'))
@@ -174,7 +173,7 @@ export default class KatipLauncher extends Extension {
                 null
             );
         } catch (e) {
-            console.warn('[Kapit] clipboard watcher write failed:', e.message);
+            console.warn('[Katip] clipboard watcher write failed:', e.message);
         }
     }
 
@@ -279,6 +278,8 @@ export default class KatipLauncher extends Extension {
         this._overlay.set_width(this._settings.get_int('launcher-width'));
         this._overlay.connect('close', () => this._close());
 
+        // hw canvas chrome added after launcher chrome below
+
         // Both actors use affectsInputRegion:false so no input region is
         // claimed — this avoids the scroll/resize side-effect on Wayland.
         // Outside clicks are detected via a global stage capture instead.
@@ -292,6 +293,26 @@ export default class KatipLauncher extends Extension {
             affectsStruts: false,
             trackFullscreen: false,
         });
+
+        // Add hw canvas AFTER launcher so it sits on top in Z-order
+        const hwCanvas = this._overlay.getHwCanvas?.();
+        if (hwCanvas) {
+            Main.layoutManager.addTopChrome(hwCanvas.widget, {
+                affectsInputRegion: false,
+                affectsStruts:      false,
+                trackFullscreen:    false,
+            });
+            // Border box sits on top of everything
+            Main.layoutManager.addTopChrome(hwCanvas._borderBox, {
+                affectsInputRegion: false,
+                affectsStruts:      false,
+                trackFullscreen:    false,
+            });
+            GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                hwCanvas.reposition();
+                return GLib.SOURCE_REMOVE;
+            });
+        }
 
         // global.stage.grab() routes all input through Shell while the launcher
         // is open, preventing scroll/click events reaching other Wayland surfaces.
@@ -373,6 +394,16 @@ export default class KatipLauncher extends Extension {
         if (this._focusGuardId) {
             GLib.source_remove(this._focusGuardId);
             this._focusGuardId = null;
+        }
+
+        // Remove hw canvas chrome — widget and borderBox are removed from the
+        // layout manager here; hwCanvas.destroy() (called via overlay.destroy()
+        // below) then destroys both GObjects and cancels any pending timers.
+        const hwCanvas = this._overlay?.getHwCanvas?.();
+        if (hwCanvas) {
+            Main.layoutManager.removeChrome(hwCanvas.widget);
+            if (hwCanvas._borderBox)
+                Main.layoutManager.removeChrome(hwCanvas._borderBox);
         }
 
         if (this._grab) {

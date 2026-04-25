@@ -9,9 +9,13 @@ import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 
-import { ResultItem } from './resultItem.js';
+import { ResultItem }          from './resultItem.js';
+import { HandwritingCanvas }  from './handwritingCanvas.js';
 
-const DEBOUNCE_MS = 150;
+const DEBOUNCE_MS   = 150;
+// Clutter does not export PROXIMITY_IN/OUT as named constants in GJS
+const PROXIMITY_IN  = 16;
+const PROXIMITY_OUT = 17;
 
 const PROVIDER_LABELS = {
     shortcuts:  'Shortcuts',
@@ -345,12 +349,12 @@ export const LauncherWidget = GObject.registerClass(
 
         _connectSystemThemeSignals() {
             this._disconnectSystemThemeSignals();
+            if (!this._desktopSettings) return;
             try {
-                this._ifaceSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' });
                 this._systemThemeIds = [];
                 for (const key of ['color-scheme', 'accent-color']) {
                     this._systemThemeIds.push(
-                        this._ifaceSettings.connect(`changed::${key}`, () => {
+                        this._desktopSettings.connect(`changed::${key}`, () => {
                             if (this._settings.get_string('color-theme') === 'system')
                                 this._rebuildTheme();
                         })
@@ -361,11 +365,8 @@ export const LauncherWidget = GObject.registerClass(
 
         _disconnectSystemThemeSignals() {
             try {
-                if (this._ifaceSettings) {
-                    for (const id of (this._systemThemeIds ?? []))
-                        this._ifaceSettings.disconnect(id);
-                    this._ifaceSettings = null;
-                }
+                for (const id of (this._systemThemeIds ?? []))
+                    this._desktopSettings?.disconnect(id);
                 this._systemThemeIds = [];
             } catch (_e) {}
         }
@@ -474,6 +475,31 @@ export const LauncherWidget = GObject.registerClass(
         _buildModeChips() {
             const t = this._t;
 
+            // ── Handwriting canvas ────────────────────────────────────────
+            this._hwCanvas = null;
+            this._hwEnabled = false;
+            try { this._hwEnabled = this._settings.get_boolean('handwriting-enabled'); } catch (_e) {}
+
+            if (this._hwEnabled) {
+                this._hwCanvas = new HandwritingCanvas(this._settings);
+                this._hwCanvas.setEntryActor(this._searchRow);
+                this._hwCanvas.onTextRecognised = (text) => {
+                    let append = false;
+                    try { append = this._settings.get_boolean('handwriting-append'); } catch (_e) {}
+                    const current = this._entry.get_text();
+                    const newText = append ? (current + text) : text;
+                    this._entry.set_text(newText);
+                    this._entry.grab_key_focus();
+                    this._runQuery(newText);
+                };
+                this._hwCanvas.onCanvasHidden = () => {
+                    this._entry.grab_key_focus();
+                };
+                // widget is added by extension.js to layoutManager as a
+                // separate top-level chrome actor so it can float freely.
+            }
+
+            // ── Category chips ─────────────────────────────────────────────
             this._chipBox = new St.BoxLayout({
                 style_class: 'kapit-chip-row',
                 style: t.chipRow,
@@ -949,11 +975,98 @@ export const LauncherWidget = GObject.registerClass(
             this._setMode(ids[(cur + 1) % ids.length]);
         }
 
+        getHwCanvas() {
+            return this._hwCanvas ?? null;
+        }
+
         grabFocus() {
             global.stage.set_key_focus(this._entry);
             this._entry.grab_key_focus();
             this._connectSystemThemeSignals();
+            this._connectStylusDetection();
+            // Reposition hw canvas overlay over the search row
+            GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                this._hwCanvas?.reposition();
+                return GLib.SOURCE_REMOVE;
+            });
             this._runQuery('');
+        }
+
+        _connectStylusDetection() {
+            if (!this._hwCanvas || !this._hwEnabled) return;
+            this._stylusLeaveId  = null;
+            this._stylusInProximity = false; // only true after PROXIMITY_IN (16)
+
+            this._stylusEventId = this.connect('captured-event', (_actor, event) => {
+                const type = event.type();
+
+                // PROXIMITY_IN — real stylus entered range
+                if (type === PROXIMITY_IN) {
+                    this._stylusInProximity = true;
+                    if (this._stylusLeaveId) {
+                        GLib.source_remove(this._stylusLeaveId);
+                        this._stylusLeaveId = null;
+                    }
+                    // Re-enable reactivity for stylus input
+                    if (this._hwCanvas?.widget)
+                        this._hwCanvas.widget.reactive = true;
+                    if (!this._hwCanvas.widget.visible)
+                        this._hwCanvas.showOverlay();
+                    return Clutter.EVENT_PROPAGATE;
+                }
+
+                // PROXIMITY_OUT — stylus left range
+                if (type === PROXIMITY_OUT) {
+                    this._stylusInProximity = false;
+                    // Make canvas non-reactive immediately so finger/mouse
+                    // clicks pass through to the launcher underneath
+                    if (this._hwCanvas?.widget)
+                        this._hwCanvas.widget.reactive = false;
+                    const hasStrokes = this._hwCanvas?.hasStrokes?.() ?? false;
+                    if (!hasStrokes && !this._stylusLeaveId) {
+                        this._stylusLeaveId = GLib.timeout_add(
+                            GLib.PRIORITY_DEFAULT, 500, () => {
+                                this._stylusLeaveId = null;
+                                this._hwCanvas?.hideOverlay();
+                                return GLib.SOURCE_REMOVE;
+                            }
+                        );
+                    }
+                    return Clutter.EVENT_PROPAGATE;
+                }
+
+                // Only handle pointer events when stylus is confirmed in proximity
+                // This prevents intercepting normal finger/mouse clicks
+                if (!this._stylusInProximity) return Clutter.EVENT_PROPAGATE;
+
+                const isPointerEvent = type === Clutter.EventType.MOTION ||
+                                       type === Clutter.EventType.BUTTON_PRESS ||
+                                       type === Clutter.EventType.BUTTON_RELEASE;
+                if (!isPointerEvent) return Clutter.EVENT_PROPAGATE;
+
+                // Only forward events within canvas bounds
+                const [ex, ey] = event.get_coords();
+                const [cx, cy] = this._hwCanvas.widget.get_transformed_position();
+                const cw = this._hwCanvas.widget.width;
+                const ch = this._hwCanvas.widget.height;
+                const inside = ex >= cx && ex <= cx + cw &&
+                               ey >= cy && ey <= cy + ch;
+                if (inside)
+                    return this._hwCanvas.handleEvent(event);
+
+                return Clutter.EVENT_PROPAGATE;
+            });
+        }
+
+        _disconnectStylusDetection() {
+            if (this._stylusLeaveId) {
+                GLib.source_remove(this._stylusLeaveId);
+                this._stylusLeaveId = null;
+            }
+            if (this._stylusEventId) {
+                this.disconnect(this._stylusEventId);
+                this._stylusEventId = null;
+            }
         }
 
         destroy() {
@@ -961,7 +1074,10 @@ export const LauncherWidget = GObject.registerClass(
                 GLib.source_remove(this._debounceId);
                 this._debounceId = null;
             }
+            this._disconnectStylusDetection();
             this._disconnectSystemThemeSignals();
+            this._hwCanvas?.destroy();
+            this._hwCanvas = null;
             _releaseDesktopSettings();
             this._desktopSettings = null;
             super.destroy();
