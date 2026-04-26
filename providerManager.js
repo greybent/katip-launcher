@@ -30,9 +30,10 @@ const REGISTRY = [
 ];
 
 export class ProviderManager {
-    constructor(settings) {
-        this._settings  = settings;
-        this._providers = [];
+    constructor(settings, clipboardHistory = null) {
+        this._settings         = settings;
+        this._clipboardHistory = clipboardHistory;
+        this._providers        = [];
         this._load();
     }
 
@@ -41,7 +42,9 @@ export class ProviderManager {
             // alwaysOn providers (shortcuts) don't have a settings toggle
             if (!alwaysOn && !this._settings.get_boolean(key)) continue;
             try {
-                const provider = new Cls(this._settings);
+                const provider = Cls === ClipboardProvider
+                    ? new Cls(this._settings, this._clipboardHistory)
+                    : new Cls(this._settings);
                 const originalQuery = provider.query.bind(provider);
                 provider.query = (text) => {
                     const ret = originalQuery(text);

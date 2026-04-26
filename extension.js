@@ -14,6 +14,7 @@ import Shell from 'gi://Shell';
 
 import { ProviderManager }  from './providerManager.js';
 import { HistoryManager }   from './history.js';
+import { ClipboardHistory } from './providers/clipboardHistory.js';
 import { LauncherWidget }   from './ui/launcher.js';
 import { KapitIndicator }   from './ui/panelIndicator.js';
 
@@ -22,6 +23,7 @@ export default class KatipLauncher extends Extension {
         this._settings          = this.getSettings();
         this._providerManager   = null;
         this._history           = new HistoryManager();
+        this._clipboardHistory  = new ClipboardHistory(this._settings);
         this._overlay           = null;
         this._backgroundBin     = null;
         this._monitorChangedId  = null;
@@ -77,7 +79,8 @@ export default class KatipLauncher extends Extension {
         this._stopClipboardWatcher();
         this._close();
         this._history?.destroy();
-        this._history = null;
+        this._history          = null;
+        this._clipboardHistory = null;
 
         // Disconnect all settings signals
         for (const id of (this._settingsIds ?? []))
@@ -107,8 +110,7 @@ export default class KatipLauncher extends Extension {
                         if (!text || !text.trim()) return;
                         if (text === this._lastClipboardText) return;
                         this._lastClipboardText = text;
-                        // Write to clipboard history file directly
-                        this._appendClipboardEntry(text);
+                        this._clipboardHistory.append(text);
                     });
                 } catch (_e) {}
                 return GLib.SOURCE_CONTINUE;
@@ -122,59 +124,6 @@ export default class KatipLauncher extends Extension {
             this._clipboardWatchId = null;
         }
         this._lastClipboardText = null;
-    }
-
-    _appendClipboardEntry(text) {
-        const dataDir  = GLib.build_filenamev([GLib.get_user_data_dir(), 'katip-launcher']);
-        const histFile = GLib.build_filenamev([dataDir, 'clipboard.json']);
-        let maxHistory = 50;
-        try { maxHistory = Math.max(1, this._settings.get_int('clipboard-max-history') || 50); } catch (_e) {}
-        const maxLen = 2000;
-
-        try {
-            // Read and migrate existing history to object format
-            let history = [];
-            try {
-                const file = Gio.File.new_for_path(histFile);
-                const [ok, contents] = file.load_contents(null);
-                if (ok) {
-                    const parsed = JSON.parse(new TextDecoder().decode(contents));
-                    if (Array.isArray(parsed)) {
-                        history = parsed
-                            .map(e => {
-                                if (typeof e === 'string') return { text: e, private: false };
-                                if (e && typeof e.text === 'string') return { text: e.text, private: !!e.private };
-                                return null;
-                            })
-                            .filter(e => e && e.text.length > 0);
-                    }
-                }
-            } catch (_e) {}
-
-            const trimmed = text.slice(0, maxLen);
-            // Don't add if identical to most recent entry
-            if (history[0]?.text === trimmed) return;
-
-            // Preserve private flag if this text was already in history
-            const existing = history.find(e => e.text === trimmed);
-            const newEntry = { text: trimmed, private: existing?.private ?? false };
-            history = [newEntry, ...history.filter(e => e.text !== trimmed)].slice(0, maxHistory);
-
-            // Ensure directory exists
-            const dir = Gio.File.new_for_path(dataDir);
-            if (!dir.query_exists(null))
-                dir.make_directory_with_parents(null);
-
-            const outFile = Gio.File.new_for_path(histFile);
-            outFile.replace_contents(
-                new TextEncoder().encode(JSON.stringify(history, null, 2)),
-                null, false,
-                Gio.FileCreateFlags.REPLACE_DESTINATION,
-                null
-            );
-        } catch (e) {
-            console.warn('[Katip] clipboard watcher write failed:', e.message);
-        }
     }
 
     _applyProviderOrder() {
@@ -257,7 +206,7 @@ export default class KatipLauncher extends Extension {
     _open() {
         if (this._overlay) return;
 
-        this._providerManager = new ProviderManager(this._settings);
+        this._providerManager = new ProviderManager(this._settings, this._clipboardHistory);
         this._applyProviderOrder();
 
         const showOverlay = this._settings.get_boolean('show-overlay');

@@ -1,6 +1,12 @@
 # Changelog
 
-## v77 (current)
+## v78 (current)
+
+- **Fix:** Clipboard file write race — `ClipboardHistory` class introduced as the sole owner of `clipboard.json`; background watcher (`extension.js`) and `ClipboardProvider` now share one instance instead of each doing independent read-modify-write cycles
+- **Fix:** Clipboard result IDs changed from filtered-array index (`clipboard:0`) to text-based prefix (`clipboard:<first 128 chars>`) — IDs are now stable across searches so history boost applies to the correct entries
+- **Fix:** Clipboard delete now looks up the entry by text in the full history instead of by filtered-list index, preventing the wrong entry being deleted when a search is active
+
+## v77
 
 - **Fix:** `hwCanvas?.reposition?.()` — idle callback in `extension.js` now uses optional chaining so a destroyed handwriting canvas object is not accessed if the launcher is closed before the idle fires
 - **Fix:** `WebProvider` search result now guards activation with `https?://` protocol check, matching the existing guard on URL results and the shortcuts provider — prevents a tampered `web-search-engine` setting from opening non-http URIs
