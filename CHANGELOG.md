@@ -1,6 +1,12 @@
 # Changelog
 
-## v76 (current)
+## v77 (current)
+
+- **Fix:** `hwCanvas?.reposition?.()` — idle callback in `extension.js` now uses optional chaining so a destroyed handwriting canvas object is not accessed if the launcher is closed before the idle fires
+- **Fix:** `WebProvider` search result now guards activation with `https?://` protocol check, matching the existing guard on URL results and the shortcuts provider — prevents a tampered `web-search-engine` setting from opening non-http URIs
+- **Fix:** `ProcessProvider._showDetails` (Ctrl+↵ on a process result) rewritten to avoid terminal emulator CLI entirely — reads `ps` output and `/proc/$pid/status` via GJS directly, writes to a temp file, and opens it with the default text viewer via `xdg-open`; the previous approach was unreliable against ptyxis's GApplication D-Bus routing
+
+## v76
 
 - **Fix:** Typo "Kapit" → "Katip" in clipboard watcher console warning
 - **Fix:** Handwriting canvas `destroy()` now nulls `onTextRecognised` and `onCanvasHidden` callbacks before tearing down widgets — prevents in-flight async recognition callbacks from touching already-destroyed objects

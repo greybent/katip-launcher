@@ -82,11 +82,28 @@ export class ProcessProvider extends BaseProvider {
     _showDetails(pid) {
         try {
             if (!/^\d+$/.test(pid)) return; // safety guard
-            const terminal = this._settings.get_string('terminal-app') || 'ptyxis';
-            Gio.Subprocess.new(
-                [terminal, '-e', `bash -c 'ps -p ${pid} -f; echo; cat /proc/${pid}/status 2>/dev/null; exec bash'`],
-                Gio.SubprocessFlags.NONE
+
+            const lines = [];
+
+            const [ok, psOut] = GLib.spawn_command_line_sync(`ps -p ${pid} -f`);
+            if (ok && psOut) lines.push(new TextDecoder().decode(psOut).trim());
+
+            lines.push('');
+
+            try {
+                const [, statusBytes] = Gio.File.new_for_path(`/proc/${pid}/status`)
+                    .load_contents(null);
+                lines.push(new TextDecoder().decode(statusBytes).trim());
+            } catch (_e) {}
+
+            const tmpPath = GLib.build_filenamev([
+                GLib.get_tmp_dir(), `katip-proc-${pid}.txt`,
+            ]);
+            Gio.File.new_for_path(tmpPath).replace_contents(
+                new TextEncoder().encode(lines.join('\n')),
+                null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null
             );
+            Gio.AppInfo.launch_default_for_uri(`file://${tmpPath}`, null);
         } catch (e) {
             console.warn('[Kapit] ProcessProvider show details error:', e.message);
         }

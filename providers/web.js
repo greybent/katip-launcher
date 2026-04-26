@@ -54,7 +54,10 @@ export class WebProvider extends BaseProvider {
             iconName:   'system-search-symbolic',
             badgeLabel: 'web',
             badgeStyle: 'purple',
-            activate:   () => Gio.AppInfo.launch_default_for_uri(searchUrl, null),
+            activate:   () => {
+                if (/^https?:\/\//i.test(searchUrl))
+                    Gio.AppInfo.launch_default_for_uri(searchUrl, null);
+            },
         });
 
         return results;

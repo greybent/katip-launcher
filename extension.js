@@ -309,7 +309,7 @@ export default class KatipLauncher extends Extension {
                 trackFullscreen:    false,
             });
             GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
-                hwCanvas.reposition();
+                hwCanvas?.reposition?.();
                 return GLib.SOURCE_REMOVE;
             });
         }
