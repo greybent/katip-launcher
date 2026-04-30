@@ -1,6 +1,13 @@
 # Changelog
 
-## v79 (current)
+## v80 (current)
+
+- **Feature:** Calculator chaining — pressing Enter on a calculator result fills the search entry with the result instead of closing the launcher, enabling chained calculations (e.g. `5+5` → Enter → `10` → type `+3` → `13`)
+- **Feature:** Calculator Ctrl+C copies the result to clipboard; Ctrl+↵ also copies
+- **Feature:** Calculator shows previous result as a second `prev`-badged item when it differs from the current result
+- **Feature:** `activateFill` and `activateCopy` result properties — general mechanism any provider can use to fill the search entry or copy on Ctrl+C without closing the launcher
+
+## v79
 
 - **Fix:** Clipboard watcher callback now null-checks `_clipboardHistory` before calling `append()` — prevents a potential error if the 3-second timer fires during the brief window between `disable()` clearing the reference and the GLib source being removed
 - **Fix:** `_close()` now nulls `this._overlay` and `this._backgroundBin` before calling `removeChrome`/`destroy()` on them — prevents reentrancy if a signal fires mid-destroy and checks those references

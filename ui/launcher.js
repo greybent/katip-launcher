@@ -876,9 +876,20 @@ export const LauncherWidget = GObject.registerClass(
                                 return Clutter.EVENT_STOP;
                             }
                         }
-                    }
-                    else
+                    } else if (result.activateFill !== undefined) {
+                        // Fill search entry with result (e.g. calculator chaining)
+                        this._history?.record(result.id);
+                        result.activate?.();
+                        this._entry.set_text(result.activateFill);
+                        if (this._debounceId) {
+                            GLib.source_remove(this._debounceId);
+                            this._debounceId = null;
+                        }
+                        this._runQuery(result.activateFill);
+                        return Clutter.EVENT_STOP;
+                    } else {
                         this._activateResult(result);
+                    }
                     this.emit('close');
                     return Clutter.EVENT_STOP;
                 });
@@ -923,6 +934,16 @@ export const LauncherWidget = GObject.registerClass(
             const sym  = event.get_key_symbol();
             const ctrl = (event.get_state() & Clutter.ModifierType.CONTROL_MASK) !== 0;
 
+            // Ctrl+C — copy result for providers that support it (e.g. calculator)
+            if (ctrl && sym === Clutter.KEY_c) {
+                const result = this._results[this._activeIndex];
+                if (result?.activateCopy) {
+                    result.activateCopy();
+                    return Clutter.EVENT_STOP;
+                }
+                return Clutter.EVENT_PROPAGATE;
+            }
+
             switch (sym) {
             case Clutter.KEY_Escape:
             case Clutter.KEY_Super_L:
@@ -955,6 +976,17 @@ export const LauncherWidget = GObject.registerClass(
                             this._runQuery(this._entry.get_text());
                             return Clutter.EVENT_STOP;
                         }
+                    } else if (!ctrl && result.activateFill !== undefined) {
+                        // Fill search entry with result (e.g. calculator chaining)
+                        this._history?.record(result.id);
+                        result.activate?.();
+                        this._entry.set_text(result.activateFill);
+                        if (this._debounceId) {
+                            GLib.source_remove(this._debounceId);
+                            this._debounceId = null;
+                        }
+                        this._runQuery(result.activateFill);
+                        return Clutter.EVENT_STOP;
                     } else {
                         this._activateResult(result);
                     }

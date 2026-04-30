@@ -6,6 +6,9 @@
 import { BaseProvider } from './base.js';
 import St from 'gi://St';
 
+// Persists last activated calculation across launcher opens within a GNOME session
+let _lastCalculation = null;
+
 /**
  * CalculatorProvider — safe math expression evaluator.
  *
@@ -18,7 +21,8 @@ import St from 'gi://St';
  *   Functions:   sqrt abs floor ceil round sin cos tan log log2 log10
  *   Constants:   pi e
  *
- * Activating a result copies it to clipboard.
+ * Enter fills the search entry with the result (for calculation chaining).
+ * Ctrl+C / Ctrl+↵ copies the result to clipboard.
  */
 export class CalculatorProvider extends BaseProvider {
     get id()       { return 'calculator'; }
@@ -44,6 +48,10 @@ export class CalculatorProvider extends BaseProvider {
                     const clipboard = St.Clipboard.get_default();
                     clipboard.set_text(St.ClipboardType.CLIPBOARD, conv.result);
                 },
+                activateCopy: () => {
+                    const clipboard = St.Clipboard.get_default();
+                    clipboard.set_text(St.ClipboardType.CLIPBOARD, conv.result);
+                },
             }];
         }
 
@@ -54,19 +62,50 @@ export class CalculatorProvider extends BaseProvider {
             if (result === null || !isFinite(result)) return [];
 
             const formatted = this._format(result);
-            return [{
-                id:         'calculator:result',
-                title:      formatted,
-                subtitle:   expr,
-                icon:       null,
-                iconName:   'accessories-calculator-symbolic',
-                badgeLabel: 'calc',
-                badgeStyle: 'amber',
-                activate:   () => {
-                    const clipboard = St.Clipboard.get_default();
-                    clipboard.set_text(St.ClipboardType.CLIPBOARD, formatted);
-                },
+            const copyFn = () => {
+                const clipboard = St.Clipboard.get_default();
+                clipboard.set_text(St.ClipboardType.CLIPBOARD, formatted);
+            };
+
+            const results = [{
+                id:               'calculator:result',
+                title:            formatted,
+                subtitle:         expr,
+                icon:             null,
+                iconName:         'accessories-calculator-symbolic',
+                badgeLabel:       'calc',
+                badgeStyle:       'amber',
+                activate:         () => { _lastCalculation = { expr, result: formatted }; },
+                activateFill:     formatted,
+                activateCopy:     copyFn,
+                activateAlt:      copyFn,
+                activateAltLabel: 'Copy',
             }];
+
+            // Show the previous result as a second item when it differs from current
+            if (_lastCalculation && _lastCalculation.result !== formatted) {
+                const prev = _lastCalculation;
+                const copyPrevFn = () => {
+                    const clipboard = St.Clipboard.get_default();
+                    clipboard.set_text(St.ClipboardType.CLIPBOARD, prev.result);
+                };
+                results.push({
+                    id:               'calculator:prev',
+                    title:            prev.result,
+                    subtitle:         `prev: ${prev.expr}`,
+                    icon:             null,
+                    iconName:         'accessories-calculator-symbolic',
+                    badgeLabel:       'prev',
+                    badgeStyle:       'gray',
+                    activate:         () => {},
+                    activateFill:     prev.result,
+                    activateCopy:     copyPrevFn,
+                    activateAlt:      copyPrevFn,
+                    activateAltLabel: 'Copy',
+                });
+            }
+
+            return results;
         } catch (_e) {
             return [];
         }
