@@ -1,6 +1,12 @@
 # Changelog
 
-## v78 (current)
+## v79 (current)
+
+- **Fix:** Clipboard watcher callback now null-checks `_clipboardHistory` before calling `append()` — prevents a potential error if the 3-second timer fires during the brief window between `disable()` clearing the reference and the GLib source being removed
+- **Fix:** `_close()` now nulls `this._overlay` and `this._backgroundBin` before calling `removeChrome`/`destroy()` on them — prevents reentrancy if a signal fires mid-destroy and checks those references
+- **Fix:** SPARQL file path filter now escapes `\` and `"` before embedding in the query string — a directory name containing a double-quote no longer breaks the SPARQL string literal
+
+## v78
 
 - **Fix:** Clipboard file write race — `ClipboardHistory` class introduced as the sole owner of `clipboard.json`; background watcher (`extension.js`) and `ClipboardProvider` now share one instance instead of each doing independent read-modify-write cycles
 - **Fix:** Clipboard result IDs changed from filtered-array index (`clipboard:0`) to text-based prefix (`clipboard:<first 128 chars>`) — IDs are now stable across searches so history boost applies to the correct entries

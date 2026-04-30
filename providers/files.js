@@ -96,13 +96,16 @@ export class FilesProvider extends BaseProvider {
 
         const { prefixBlock, nie, nfo } = this._ontology;
 
-        const unionBlocks = paths.map(p => `{
+        const unionBlocks = paths.map(p => {
+            const safePath = p.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            return `{
                 ?file a ${nfo}FileDataObject ;
                       ${nie}url ?url ;
                       ${nfo}fileName ?name .
-                FILTER (STRSTARTS(STR(?url), "file://${p}/"))
+                FILTER (STRSTARTS(STR(?url), "file://${safePath}/"))
                 FILTER (CONTAINS(LCASE(?name), LCASE("${safe}")))
-            }`).join('\nUNION\n');
+            }`;
+        }).join('\nUNION\n');
 
         const sparql = `${prefixBlock}
             SELECT DISTINCT ?url ?name WHERE {

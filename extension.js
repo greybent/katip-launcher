@@ -107,6 +107,7 @@ export default class KatipLauncher extends Extension {
                 if (!this._clipboardWatchId) return GLib.SOURCE_REMOVE;
                 try {
                     clipboard.get_text(St.ClipboardType.CLIPBOARD, (_c, text) => {
+                        if (!this._clipboardHistory) return;
                         if (!text || !text.trim()) return;
                         if (text === this._lastClipboardText) return;
                         this._lastClipboardText = text;
@@ -375,13 +376,16 @@ export default class KatipLauncher extends Extension {
             this._monitorChangedId = null;
         }
 
-        Main.layoutManager.removeChrome(this._overlay);
-        this._overlay.destroy();
+        const overlayRef = this._overlay;
+        const backgroundBinRef = this._backgroundBin;
         this._overlay = null;
-
-        Main.layoutManager.removeChrome(this._backgroundBin);
-        this._backgroundBin?.destroy();
         this._backgroundBin = null;
+
+        Main.layoutManager.removeChrome(overlayRef);
+        overlayRef.destroy();
+
+        Main.layoutManager.removeChrome(backgroundBinRef);
+        backgroundBinRef?.destroy();
 
         this._providerManager?.destroy();
         this._providerManager = null;
