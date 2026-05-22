@@ -297,7 +297,7 @@ export const LauncherWidget = GObject.registerClass(
 
         _init(settings, providerManager, history, onPrefs) {
             super._init({
-                vertical: true,
+                orientation: Clutter.Orientation.VERTICAL,
                 style_class: 'katip-launcher',
                 reactive: true,
             });
@@ -543,7 +543,7 @@ export const LauncherWidget = GObject.registerClass(
 
         _buildResultsBox() {
             this._resultsBox = new St.BoxLayout({
-                vertical: true,
+                orientation: Clutter.Orientation.VERTICAL,
                 x_expand: true,
                 style_class: 'kapit-results-box',
             });

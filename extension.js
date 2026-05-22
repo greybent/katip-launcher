@@ -230,16 +230,14 @@ export default class KatipLauncher extends Extension {
 
         // hw canvas chrome added after launcher chrome below
 
-        // Both actors use affectsInputRegion:false so no input region is
-        // claimed — this avoids the scroll/resize side-effect on Wayland.
-        // Outside clicks are detected via a global stage capture instead.
+        // Neither actor claims an input region — this avoids the scroll/resize
+        // side-effect on Wayland. Outside clicks are detected via a global
+        // stage capture instead. (affectsInputRegion was removed in GNOME 50.)
         Main.layoutManager.addTopChrome(this._backgroundBin, {
-            affectsInputRegion: false,
             affectsStruts: false,
             trackFullscreen: false,
         });
         Main.layoutManager.addTopChrome(this._overlay, {
-            affectsInputRegion: false,
             affectsStruts: false,
             trackFullscreen: false,
         });
@@ -248,15 +246,13 @@ export default class KatipLauncher extends Extension {
         const hwCanvas = this._overlay.getHwCanvas?.();
         if (hwCanvas) {
             Main.layoutManager.addTopChrome(hwCanvas.widget, {
-                affectsInputRegion: false,
-                affectsStruts:      false,
-                trackFullscreen:    false,
+                affectsStruts:   false,
+                trackFullscreen: false,
             });
             // Border box sits on top of everything
             Main.layoutManager.addTopChrome(hwCanvas._borderBox, {
-                affectsInputRegion: false,
-                affectsStruts:      false,
-                trackFullscreen:    false,
+                affectsStruts:   false,
+                trackFullscreen: false,
             });
             GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
                 hwCanvas?.reposition?.();

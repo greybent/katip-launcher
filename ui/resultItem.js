@@ -48,7 +48,7 @@ export class ResultItem {
         this.actor.add_child(iconBin);
 
         const textBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
             style: 'padding: 0 8px;',
