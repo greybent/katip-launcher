@@ -70,10 +70,10 @@ export class ProcessProvider extends BaseProvider {
         }
     }
 
-    _killProcess(pid, comm) {
+    _killProcess(pid, _comm) {
         try {
             if (!/^\d+$/.test(pid)) return; // safety guard
-            GLib.spawn_command_line_async(`kill ${pid}`);
+            Gio.Subprocess.new(['kill', pid], Gio.SubprocessFlags.NONE);
         } catch (e) {
             console.warn('[Kapit] ProcessProvider kill error:', e.message);
         }
@@ -85,8 +85,14 @@ export class ProcessProvider extends BaseProvider {
 
             const lines = [];
 
-            const [ok, psOut] = GLib.spawn_command_line_sync(`ps -p ${pid} -f`);
-            if (ok && psOut) lines.push(new TextDecoder().decode(psOut).trim());
+            try {
+                const psProc = Gio.Subprocess.new(
+                    ['ps', '-p', pid, '-f'],
+                    Gio.SubprocessFlags.STDOUT_PIPE
+                );
+                const [, psOut] = psProc.communicate_utf8(null, null);
+                if (psOut) lines.push(psOut.trim());
+            } catch (_e) {}
 
             lines.push('');
 

@@ -536,7 +536,7 @@ export class HandwritingCanvas {
             proc.communicate_utf8_async(null, null, (_proc, res) => {
                 try {
                     const [, stdout] = _proc.communicate_utf8_finish(res);
-                    const text = (stdout || '').trim().replace(//g, '');
+                    const text = (stdout || '').trim().replace(/\f/g, '');
                     if (text) this._onRecognised(text);
                     try { Gio.File.new_for_path(tmpPng).delete(null); } catch (_e) {}
                 } catch (e) { console.warn('[Katip] Tesseract failed:', e.message); }

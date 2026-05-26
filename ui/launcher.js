@@ -121,7 +121,6 @@ function buildSystemTheme(desktopSettings) {
     const accent   = isDark ? accentD : accentL;
     const accentRgb = hexToRgb(accent);
     const bg       = isDark ? '#1e1e1e' : '#f6f5f4';
-    const surface  = isDark ? '#2a2a2a' : '#ffffff';
     const text     = isDark ? '#eeeeee' : '#1a1a1a';
     const textMid  = isDark ? 'rgba(238,238,238,0.6)' : 'rgba(26,26,26,0.6)';
     const textLow  = isDark ? 'rgba(238,238,238,0.35)' : 'rgba(26,26,26,0.35)';
