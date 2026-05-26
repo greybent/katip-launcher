@@ -43,11 +43,6 @@ export class TimerProvider extends BaseProvider {
     get label()    { return 'Timer'; }
     get priority() { return 42; } // just after calculator
 
-    constructor(settings) {
-        super(settings);
-        this._timerIds = [];
-    }
-
     query(text) {
         const trimmed = text.trim().toLowerCase();
         if (!trimmed.startsWith(TRIGGER)) return [];
@@ -81,18 +76,10 @@ export class TimerProvider extends BaseProvider {
     }
 
     _startTimer(seconds, label, display) {
-        const id = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, seconds, () => {
-            this._timerIds = this._timerIds.filter(i => i !== id);
+        GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, seconds, () => {
             this._sendNotification(label, display);
             return GLib.SOURCE_REMOVE;
         });
-        this._timerIds.push(id);
-    }
-
-    destroy() {
-        for (const id of this._timerIds)
-            GLib.source_remove(id);
-        this._timerIds = [];
     }
 
     _sendNotification(label, display) {
