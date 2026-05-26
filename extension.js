@@ -30,7 +30,6 @@ export default class KatipLauncher extends Extension {
         this._stageEventId      = null;
         this._focusWindowId     = null;
         this._focusGuardId      = null;
-        this._grab              = null;
         this._indicator         = null;
         this._clipboardWatchId  = null;
         this._lastClipboardText = null;
@@ -261,53 +260,22 @@ export default class KatipLauncher extends Extension {
             });
         }
 
-        // global.stage.grab() routes all input through Shell while the launcher
-        // is open, preventing scroll/click events reaching other Wayland surfaces.
-        // Unlike pushModal it does not require an input region to be set.
-        try {
-            this._grab = global.stage.grab(this._overlay);
-        } catch (_e) {
-            // grab() not available (GNOME < 45) — fall back gracefully
-            this._grab = null;
-        }
-
-        // With a grab active, all events are delivered to the grabbed actor (overlay).
-        // We handle button-press on the overlay to detect outside clicks,
-        // and handle event on the stage only as a fallback for scroll swallowing.
-        this._stageEventId = this._overlay.connect('event', (_actor, event) => {
-            const type = event.type();
-
-            // Outside click — dismiss grab and close so the click reaches its target
-            if (type === Clutter.EventType.BUTTON_PRESS) {
-                const [ex, ey] = event.get_coords();
-                const [ox, oy] = this._overlay.get_transformed_position();
-                const [ow, oh] = [this._overlay.width, this._overlay.height];
-                const inside = ex >= ox && ex <= ox + ow && ey >= oy && ey <= oy + oh;
-                if (!inside) {
-                    if (this._grab) {
-                        this._grab.dismiss();
-                        this._grab = null;
-                    }
-                    this._close();
-                    return Clutter.EVENT_PROPAGATE;
-                }
+        // Detect clicks outside the launcher to close it. A stage grab is
+        // intentionally NOT used — it would block scroll events from reaching
+        // other Wayland surfaces (Firefox, etc.). captured-event on the stage
+        // fires before the event reaches any actor, so we can check position
+        // and close without preventing the click from reaching its target.
+        this._stageEventId = global.stage.connect('captured-event', (_s, event) => {
+            if (event.type() !== Clutter.EventType.BUTTON_PRESS) return Clutter.EVENT_PROPAGATE;
+            if (!this._overlay) return Clutter.EVENT_PROPAGATE;
+            const [ex, ey] = event.get_coords();
+            const [ox, oy] = this._overlay.get_transformed_position();
+            const [ow, oh] = [this._overlay.width, this._overlay.height];
+            const inside = ex >= ox && ex <= ox + ow && ey >= oy && ey <= oy + oh;
+            if (!inside) {
+                this._close();
+                return Clutter.EVENT_PROPAGATE;
             }
-
-            // Handle scroll events: navigate results inside, swallow outside
-            if (type === Clutter.EventType.SCROLL) {
-                const [ex, ey] = event.get_coords();
-                const [ox, oy] = this._overlay.get_transformed_position();
-                const [ow, oh] = [this._overlay.width, this._overlay.height];
-                const inside = ex >= ox && ex <= ox + ow && ey >= oy && ey <= oy + oh;
-                if (!inside) return Clutter.EVENT_STOP;
-                const dir = event.get_scroll_direction();
-                if (dir === Clutter.ScrollDirection.UP)
-                    this._overlay.navigateScroll(-1);
-                else if (dir === Clutter.ScrollDirection.DOWN)
-                    this._overlay.navigateScroll(1);
-                return Clutter.EVENT_STOP;
-            }
-
             return Clutter.EVENT_PROPAGATE;
         });
 
@@ -367,13 +335,8 @@ export default class KatipLauncher extends Extension {
                 Main.layoutManager.removeChrome(hwCanvas._borderBox);
         }
 
-        if (this._grab) {
-            this._grab.dismiss();
-            this._grab = null;
-        }
-
-        if (this._stageEventId && this._overlay) {
-            this._overlay.disconnect(this._stageEventId);
+        if (this._stageEventId) {
+            global.stage.disconnect(this._stageEventId);
             this._stageEventId = null;
         }
 

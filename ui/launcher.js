@@ -1011,10 +1011,6 @@ export const LauncherWidget = GObject.registerClass(
             return Clutter.EVENT_PROPAGATE;
         }
 
-        navigateScroll(delta) {
-            this._setActiveIndex(this._activeIndex + delta);
-        }
-
         _cycleMode() {
             const ids = ['all', ...this._providerManager.providers.map(p => p.id)];
             const cur = ids.indexOf(this._activeMode);
