@@ -28,6 +28,7 @@ export default class KatipLauncher extends Extension {
         this._backgroundBin     = null;
         this._monitorChangedId  = null;
         this._stageEventId      = null;
+        this._grab              = null;
         this._focusWindowId     = null;
         this._focusGuardId      = null;
         this._indicator         = null;
@@ -230,9 +231,6 @@ export default class KatipLauncher extends Extension {
 
         // hw canvas chrome added after launcher chrome below
 
-        // Neither actor claims an input region — this avoids the scroll/resize
-        // side-effect on Wayland. Outside clicks are detected via a global
-        // stage capture instead. (affectsInputRegion was removed in GNOME 50.)
         Main.layoutManager.addTopChrome(this._backgroundBin, {
             affectsStruts: false,
             trackFullscreen: false,
@@ -260,21 +258,36 @@ export default class KatipLauncher extends Extension {
             });
         }
 
-        // Detect clicks outside the launcher to close it. A stage grab is
-        // intentionally NOT used — it would block scroll events from reaching
-        // other Wayland surfaces (Firefox, etc.). captured-event on the stage
-        // fires before the event reaches any actor, so we can check position
-        // and close without preventing the click from reaching its target.
-        this._stageEventId = global.stage.connect('captured-event', (_s, event) => {
-            if (event.type() !== Clutter.EventType.BUTTON_PRESS) return Clutter.EVENT_PROPAGATE;
-            if (!this._overlay) return Clutter.EVENT_PROPAGATE;
-            const [ex, ey] = event.get_coords();
-            const [ox, oy] = this._overlay.get_transformed_position();
-            const [ow, oh] = [this._overlay.width, this._overlay.height];
-            const inside = ex >= ox && ex <= ox + ow && ey >= oy && ey <= oy + oh;
-            if (!inside) {
-                this._close();
-                return Clutter.EVENT_PROPAGATE;
+        // Grab all input so outside clicks reach the overlay event handler below.
+        // Scroll events outside the launcher are swallowed (EVENT_STOP) to prevent
+        // them from reaching other Wayland surfaces with stale modifier state.
+        try {
+            this._grab = global.stage.grab(this._overlay);
+        } catch (_e) {
+            this._grab = null;
+        }
+        this._stageEventId = this._overlay.connect('event', (_actor, event) => {
+            const type = event.type();
+            if (type === Clutter.EventType.BUTTON_PRESS) {
+                const [ex, ey] = event.get_coords();
+                const [ox, oy] = this._overlay.get_transformed_position();
+                const [ow, oh] = [this._overlay.width, this._overlay.height];
+                const inside = ex >= ox && ex <= ox + ow && ey >= oy && ey <= oy + oh;
+                if (!inside) {
+                    if (this._grab) {
+                        this._grab.dismiss();
+                        this._grab = null;
+                    }
+                    this._close();
+                    return Clutter.EVENT_PROPAGATE;
+                }
+            }
+            if (type === Clutter.EventType.SCROLL) {
+                const [ex, ey] = event.get_coords();
+                const [ox, oy] = this._overlay.get_transformed_position();
+                const [ow, oh] = [this._overlay.width, this._overlay.height];
+                const inside = ex >= ox && ex <= ox + ow && ey >= oy && ey <= oy + oh;
+                if (!inside) return Clutter.EVENT_STOP;
             }
             return Clutter.EVENT_PROPAGATE;
         });
@@ -335,8 +348,12 @@ export default class KatipLauncher extends Extension {
                 Main.layoutManager.removeChrome(hwCanvas._borderBox);
         }
 
-        if (this._stageEventId) {
-            global.stage.disconnect(this._stageEventId);
+        if (this._grab) {
+            this._grab.dismiss();
+            this._grab = null;
+        }
+        if (this._stageEventId && this._overlay) {
+            this._overlay.disconnect(this._stageEventId);
             this._stageEventId = null;
         }
 
