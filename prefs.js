@@ -151,36 +151,19 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
         keybindRow.add_suffix(resetBtn);
         keybindGroup.add(keybindRow);
 
-        // Capture mode: clicking the row records a new shortcut
-        let capturing = false;
-
+        // Capture mode: clicking the row opens a modal dialog to record a new shortcut.
+        // A dedicated dialog is used so the EventControllerKey is the sole recipient
+        // of key events — avoiding the bubble-phase problem where child widgets consume
+        // keys before the window controller sees them.
         keybindRow.connect('activated', () => {
-            if (capturing) return;
-            capturing = true;
-            keybindLabel.set_accelerator('');
-            keybindRow.set_subtitle('Press the new shortcut combination…');
-            keybindRow.add_css_class('accent');
-        });
+            const dialog = new Adw.AlertDialog({
+                heading: 'New keyboard shortcut',
+                body: 'Press the combination you want to use.\nEscape or Backspace to cancel.',
+                close_response: 'cancel',
+            });
+            dialog.add_response('cancel', 'Cancel');
 
-        // Intercept keypress on the window to capture the new shortcut
-        const keyController = new Gtk.EventControllerKey();
-        window.add_controller(keyController);
-
-        keyController.connect('key-pressed', (_ctrl, keyval, keycode, state) => {
-            if (!capturing) return false;
-
-            // Escape or Backspace cancels
-            if (keyval === Gdk.KEY_Escape || keyval === Gdk.KEY_BackSpace) {
-                capturing = false;
-                const current = settings.get_strv('toggle-launcher')[0] ?? '<Control>space';
-                keybindLabel.set_accelerator(current);
-                keybindRow.set_subtitle('');
-                keybindRow.remove_css_class('accent');
-                return true;
-            }
-
-            // Ignore bare modifier keys
-            const modifierKeys = [
+            const modifierKeys = new Set([
                 Gdk.KEY_Shift_L, Gdk.KEY_Shift_R,
                 Gdk.KEY_Control_L, Gdk.KEY_Control_R,
                 Gdk.KEY_Alt_L, Gdk.KEY_Alt_R,
@@ -188,27 +171,34 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
                 Gdk.KEY_Meta_L, Gdk.KEY_Meta_R,
                 Gdk.KEY_Hyper_L, Gdk.KEY_Hyper_R,
                 Gdk.KEY_ISO_Level3_Shift,
-            ];
-            if (modifierKeys.includes(keyval)) return true;
+            ]);
 
-            // Build the accelerator string
-            const mask = state & Gtk.accelerator_get_default_mod_mask();
-            const accel = Gtk.accelerator_name(keyval, mask);
+            const keyController = new Gtk.EventControllerKey();
+            // CAPTURE phase: receive events before any child widget consumes them
+            keyController.set_propagation_phase(Gtk.PropagationPhase.CAPTURE);
+            dialog.add_controller(keyController);
 
-            if (!accel || accel === '') return true;
+            keyController.connect('key-pressed', (_ctrl, keyval, _keycode, state) => {
+                if (keyval === Gdk.KEY_Escape || keyval === Gdk.KEY_BackSpace) {
+                    dialog.close();
+                    return true;
+                }
+                if (modifierKeys.has(keyval)) return true;
 
-            // Save to GSettings
-            settings.set_strv('toggle-launcher', [accel]);
-            keybindLabel.set_accelerator(accel);
-            keybindRow.set_subtitle('');
-            keybindRow.remove_css_class('accent');
-            capturing = false;
-            return true;
+                const mask = state & Gtk.accelerator_get_default_mod_mask();
+                const accel = Gtk.accelerator_name(keyval, mask);
+                if (!accel || accel === '') return true;
+
+                settings.set_strv('toggle-launcher', [accel]);
+                dialog.close();
+                return true;
+            });
+
+            dialog.present(window);
         });
 
         settings.connect('changed::toggle-launcher', () => {
-            if (!capturing)
-                keybindLabel.set_accelerator(settings.get_strv('toggle-launcher')[0] ?? '');
+            keybindLabel.set_accelerator(settings.get_strv('toggle-launcher')[0] ?? '');
         });
 
         // ── Text prefix group ────────────────────────────────────────────
