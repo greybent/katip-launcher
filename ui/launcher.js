@@ -323,14 +323,6 @@ export const LauncherWidget = GObject.registerClass(
             this._buildResultsBox();
             this._buildFooter();
 
-            this.connect('scroll-event', (_actor, event) => {
-                const dir = event.get_scroll_direction();
-                if (dir === Clutter.ScrollDirection.UP)
-                    this._setActiveIndex(this._activeIndex - 1);
-                else if (dir === Clutter.ScrollDirection.DOWN)
-                    this._setActiveIndex(this._activeIndex + 1);
-                return Clutter.EVENT_STOP;
-            });
         }
 
         _getTheme() {
@@ -1017,6 +1009,10 @@ export const LauncherWidget = GObject.registerClass(
                 return Clutter.EVENT_STOP;
             }
             return Clutter.EVENT_PROPAGATE;
+        }
+
+        navigateScroll(delta) {
+            this._setActiveIndex(this._activeIndex + delta);
         }
 
         _cycleMode() {

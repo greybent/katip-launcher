@@ -293,13 +293,19 @@ export default class KatipLauncher extends Extension {
                 }
             }
 
-            // Swallow scroll events that land outside the launcher widget
+            // Handle scroll events: navigate results inside, swallow outside
             if (type === Clutter.EventType.SCROLL) {
                 const [ex, ey] = event.get_coords();
                 const [ox, oy] = this._overlay.get_transformed_position();
                 const [ow, oh] = [this._overlay.width, this._overlay.height];
                 const inside = ex >= ox && ex <= ox + ow && ey >= oy && ey <= oy + oh;
                 if (!inside) return Clutter.EVENT_STOP;
+                const dir = event.get_scroll_direction();
+                if (dir === Clutter.ScrollDirection.UP)
+                    this._overlay.navigateScroll(-1);
+                else if (dir === Clutter.ScrollDirection.DOWN)
+                    this._overlay.navigateScroll(1);
+                return Clutter.EVENT_STOP;
             }
 
             return Clutter.EVENT_PROPAGATE;
