@@ -116,7 +116,7 @@ export class CalculatorProvider extends BaseProvider {
 
     _tryConvert(text) {
         const m = text.trim().match(
-            /^([\d.]+)\s*([a-zA-Z°]+)\s+(?:to|in|as)\s+([a-zA-Z°]+)$/i
+            /^([\d.]+)\s*([a-zA-Z°/]+)\s+(?:to|in|as)\s+([a-zA-Z°/]+)$/i
         );
         if (!m) return null;
 

@@ -322,6 +322,15 @@ export const LauncherWidget = GObject.registerClass(
             this._buildModeChips();
             this._buildResultsBox();
             this._buildFooter();
+
+            this.connect('scroll-event', (_actor, event) => {
+                const dir = event.get_scroll_direction();
+                if (dir === Clutter.ScrollDirection.UP)
+                    this._setActiveIndex(this._activeIndex - 1);
+                else if (dir === Clutter.ScrollDirection.DOWN)
+                    this._setActiveIndex(this._activeIndex + 1);
+                return Clutter.EVENT_STOP;
+            });
         }
 
         _getTheme() {
