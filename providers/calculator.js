@@ -138,7 +138,6 @@ export class CalculatorProvider extends BaseProvider {
             ['yards','m',    v => v / 1.09361],
             ['cm',  'in',    v => v / 2.54],
             ['in',  'cm',    v => v * 2.54],
-            ['in',  'inches',v => v * 2.54, 'cm'],
             // Mass
             ['kg',  'lbs',   v => v * 2.20462],
             ['kg',  'lb',    v => v * 2.20462],
@@ -158,7 +157,6 @@ export class CalculatorProvider extends BaseProvider {
             ['mph', 'kmh',   v => v / 0.621371],
             ['km/h','mph',   v => v * 0.621371],
             ['mph', 'km/h',  v => v / 0.621371],
-            ['ms',  'kmh',   v => v * 3.6],
             ['m/s', 'km/h',  v => v * 3.6],
             // Volume
             ['l',   'gal',   v => v * 0.264172],
@@ -310,7 +308,7 @@ export class CalculatorProvider extends BaseProvider {
         // Number
         const numMatch = /^-?[\d]+(?:\.[\d]+)?(?:e[+-]?[\d]+)?/.exec(
             this._src.slice(this._pos)
-        ) || /^[\d]+(?:\.[\d]+)?(?:e[+-]?[\d]+)?/.exec(this._src.slice(this._pos));
+        );
         if (numMatch) {
             this._pos += numMatch[0].length;
             return parseFloat(numMatch[0]);

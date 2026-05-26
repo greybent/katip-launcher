@@ -90,9 +90,6 @@ export class CommandProvider extends BaseProvider {
             const inPath = GLib.find_program_in_path(bin);
             if (!inPath) return true; // unknown binary — prefer terminal so error is visible
 
-            // Known GUI app patterns
-            if (/\.(py|rb|js|sh|bash|zsh|fish)$/.test(bin)) return true;
-
             return true; // default: prefer terminal for unknown binaries
         } catch (e) {
             console.warn('[Kapit] CommandProvider._likelyNeedsTerminal error:', e.message);

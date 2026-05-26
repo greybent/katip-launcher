@@ -53,7 +53,7 @@ export const KapitIndicator = GObject.registerClass(
 
             // ── Popup menu ───────────────────────────────────────────────────
 
-            const openItem = new PopupMenu.PopupMenuItem('Open Kapit');
+            const openItem = new PopupMenu.PopupMenuItem('Open Katip');
             openItem.connect('activate', () => this._onOpen());
             this.menu.addMenuItem(openItem);
 
@@ -65,7 +65,7 @@ export const KapitIndicator = GObject.registerClass(
 
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-            const disableItem = new PopupMenu.PopupMenuItem('Disable Kapit');
+            const disableItem = new PopupMenu.PopupMenuItem('Disable Katip');
             disableItem.connect('activate', () => {
                 const { extensionManager } = Main;
                 const ext = extensionManager.lookup('katip-launcher@local');
