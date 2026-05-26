@@ -311,6 +311,7 @@ export const LauncherWidget = GObject.registerClass(
             this._debounceId      = null;
             this._resultItems     = [];
             this._queryGen        = 0;
+            this._didActivate     = false;
             // Acquire cached desktop settings for system theme
             this._desktopSettings = _acquireDesktopSettings();
             this._t               = this._getTheme();
@@ -889,7 +890,7 @@ export const LauncherWidget = GObject.registerClass(
                     } else {
                         this._activateResult(result);
                     }
-                    this.emit('close');
+                    this._closeAfterActivation();
                     return Clutter.EVENT_STOP;
                 });
                 this._resultItems.push(item);
@@ -925,6 +926,15 @@ export const LauncherWidget = GObject.registerClass(
         _activateResult(result) {
             this._history?.record(result.id);
             result.activate?.();
+        }
+
+        _closeAfterActivation() {
+            this._didActivate = true;
+            this.emit('close');
+        }
+
+        get searchText() {
+            return this._entry?.get_text() ?? '';
         }
 
         // ── Keyboard ──────────────────────────────────────────────────────────
@@ -989,7 +999,7 @@ export const LauncherWidget = GObject.registerClass(
                     } else {
                         this._activateResult(result);
                     }
-                    this.emit('close');
+                    this._closeAfterActivation();
                 }
                 return Clutter.EVENT_STOP;
             }
@@ -1010,7 +1020,7 @@ export const LauncherWidget = GObject.registerClass(
             return this._hwCanvas ?? null;
         }
 
-        grabFocus() {
+        grabFocus(savedText = '') {
             global.stage.set_key_focus(this._entry);
             this._entry.grab_key_focus();
             this._connectSystemThemeSignals();
@@ -1020,7 +1030,13 @@ export const LauncherWidget = GObject.registerClass(
                 this._hwCanvas?.reposition();
                 return GLib.SOURCE_REMOVE;
             });
-            this._runQuery('');
+            if (savedText) {
+                this._entry.set_text(savedText);
+                this._entry.clutter_text.set_cursor_position(savedText.length);
+                this._runQuery(savedText);
+            } else {
+                this._runQuery('');
+            }
         }
 
         _connectStylusDetection() {

@@ -35,6 +35,7 @@ export default class KatipLauncher extends Extension {
         this._clipboardWatchId  = null;
         this._lastClipboardText = null;
         this._settingsIds       = [];
+        this._savedSearchText   = '';
 
         // Seed default shortcuts if user has none yet
         this._seedDefaultShortcuts();
@@ -310,8 +311,9 @@ export default class KatipLauncher extends Extension {
             'monitors-changed', () => this._positionOverlay()
         );
 
+        const savedText = this._savedSearchText;
         GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
-            this._overlay?.grabFocus();
+            this._overlay?.grabFocus(savedText);
             return GLib.SOURCE_REMOVE;
         });
 
@@ -336,6 +338,13 @@ export default class KatipLauncher extends Extension {
 
     _close() {
         if (!this._overlay) return;
+
+        // Preserve search text across opens; clear it only after a real activation
+        if (!this._overlay._didActivate) {
+            this._savedSearchText = this._overlay.searchText;
+        } else {
+            this._savedSearchText = '';
+        }
 
         if (this._focusGuardId) {
             GLib.source_remove(this._focusGuardId);
