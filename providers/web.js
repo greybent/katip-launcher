@@ -9,6 +9,11 @@ import Gio from 'gi://Gio';
 // Matches bare domains (google.com, sub.domain.co.uk) and https/http URLs only
 const URL_RE = /^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/\S*)?$/;
 
+// Common source/text file extensions that look like bare domains
+// (e.g. "index.js", "config.yaml") but should not be treated as URLs unless
+// an explicit http(s):// scheme is present.
+const FILENAME_EXT_RE = /\.(js|mjs|cjs|ts|tsx|jsx|json|ya?ml|toml|ini|cfg|conf|txt|md|py|rb|sh|bash|zsh|c|h|cpp|hpp|rs|go|java|kt|php|lua|sql|css|scss|html?|xml|csv|log|png|jpe?g|gif|svg|pdf|zip|tar|gz)$/i;
+
 export class WebProvider extends BaseProvider {
     get id()       { return 'web'; }
     get label()    { return 'Web'; }
@@ -21,10 +26,15 @@ export class WebProvider extends BaseProvider {
         const results = [];
 
         // ── URL detection ────────────────────────────────────────────────────
-        if (URL_RE.test(trimmed)) {
-            const url = /^[a-zA-Z]+:\/\//.test(trimmed)
-                ? trimmed
-                : `https://${trimmed}`;
+        const hasScheme = /^[a-zA-Z]+:\/\//.test(trimmed);
+        // Skip filename-looking input (e.g. "index.js") unless it has a scheme
+        // or a path component, so plain filenames don't masquerade as URLs.
+        const looksLikeFilename = !hasScheme &&
+            !trimmed.includes('/') &&
+            FILENAME_EXT_RE.test(trimmed);
+
+        if (URL_RE.test(trimmed) && !looksLikeFilename) {
+            const url = hasScheme ? trimmed : `https://${trimmed}`;
 
             results.push({
                 id:         'web:url',

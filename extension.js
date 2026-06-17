@@ -15,6 +15,7 @@ import Shell from 'gi://Shell';
 import { ProviderManager }  from './providerManager.js';
 import { HistoryManager }   from './history.js';
 import { ClipboardHistory } from './providers/clipboardHistory.js';
+import { cancelAllTimers }  from './providers/timer.js';
 import { LauncherWidget }   from './ui/launcher.js';
 import { KapitIndicator }   from './ui/panelIndicator.js';
 
@@ -78,6 +79,7 @@ export default class KatipLauncher extends Extension {
         Main.wm.removeKeybinding('toggle-launcher');
         this._removeIndicator();
         this._stopClipboardWatcher();
+        cancelAllTimers();
         this._close();
         this._history?.destroy();
         this._history          = null;
@@ -91,8 +93,8 @@ export default class KatipLauncher extends Extension {
     }
 
     // ── Background clipboard watcher ─────────────────────────────────────────
-    // Polls clipboard every second so history is built even while launcher is closed.
-    // Only runs when enable-clipboard is true.
+    // Polls clipboard every 3 seconds so history is built even while the
+    // launcher is closed. Only runs when enable-clipboard is true.
 
     _startClipboardWatcher() {
         if (this._clipboardWatchId) return; // already running

@@ -6,8 +6,22 @@
 import { BaseProvider } from './base.js';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 const TRIGGER = 'timer ';
+
+// Module-level registry of pending timer source ids. Timers must outlive the
+// provider (which is destroyed every time the launcher closes), so they are
+// tracked here rather than on the instance. cancelAllTimers() is called from
+// the extension's disable() so nothing fires after the extension unloads.
+const ACTIVE_TIMERS = new Set();
+
+export function cancelAllTimers() {
+    for (const id of ACTIVE_TIMERS) {
+        try { GLib.source_remove(id); } catch (_e) {}
+    }
+    ACTIVE_TIMERS.clear();
+}
 
 // Parse duration strings like "25m", "1h30m", "90s", "2h", "1h 30m 10s"
 function parseDuration(text) {
@@ -76,15 +90,25 @@ export class TimerProvider extends BaseProvider {
     }
 
     _startTimer(seconds, label, display) {
-        GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, seconds, () => {
+        let id = 0;
+        id = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, seconds, () => {
+            ACTIVE_TIMERS.delete(id);
             this._sendNotification(label, display);
             return GLib.SOURCE_REMOVE;
         });
+        ACTIVE_TIMERS.add(id);
     }
 
     _sendNotification(label, display) {
+        // Prefer GNOME Shell's own notification API — it works regardless of
+        // whether notify-send (libnotify) is installed.
         try {
-            // Use notify-send as it's universally available and reliable
+            Main.notify(`Timer: ${label}`, `${display} elapsed`);
+            return;
+        } catch (e) {
+            console.warn('[Kapit] TimerProvider Main.notify failed, trying notify-send:', e.message);
+        }
+        try {
             Gio.Subprocess.new(
                 ['notify-send',
                  '--icon=alarm',

@@ -20,7 +20,10 @@ export class FilesProvider extends BaseProvider {
         this._connection = null;
         this._available  = false;
         this._ontology   = null;
-        this._initConnection();
+        // Keep the init promise so query() can await it — otherwise the first
+        // query after the launcher opens can run before the Tracker bus
+        // connection is ready and silently skip all indexed results.
+        this._initPromise = this._initConnection();
     }
 
     async _initConnection() {
@@ -40,6 +43,10 @@ export class FilesProvider extends BaseProvider {
 
     async query(text) {
         if (!text || text.length < 2) return [];
+
+        // Wait for the Tracker connection attempt to finish before deciding
+        // whether indexed search is available (no-op once resolved).
+        if (this._initPromise) await this._initPromise;
 
         const homeDir = GLib.get_home_dir();
         const allPaths = this._settings.get_strv('file-search-paths')

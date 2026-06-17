@@ -68,8 +68,10 @@ export const KapitIndicator = GObject.registerClass(
             const disableItem = new PopupMenu.PopupMenuItem('Disable Katip');
             disableItem.connect('activate', () => {
                 const { extensionManager } = Main;
-                const ext = extensionManager.lookup('katip-launcher@local');
-                if (ext) extensionManager.disableExtension(ext);
+                const uuid = 'katip-launcher@local';
+                // disableExtension() expects the uuid string, not the lookup object
+                if (extensionManager.lookup(uuid))
+                    extensionManager.disableExtension(uuid);
             });
             this.menu.addMenuItem(disableItem);
         }

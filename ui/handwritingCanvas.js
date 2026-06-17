@@ -524,7 +524,12 @@ export class HandwritingCanvas {
                 cr.stroke();
             }
 
-            const tmpPng = GLib.build_filenamev([GLib.get_tmp_dir(), 'katip-hw.png']);
+            // Unique per-invocation filename so overlapping recognitions don't
+            // clobber each other's PNG before tesseract reads it.
+            const tmpPng = GLib.build_filenamev([
+                GLib.get_tmp_dir(),
+                `katip-hw-${GLib.get_monotonic_time()}.png`,
+            ]);
             surface.writeToPNG(tmpPng);
 
             const lang = this._getTesseractLang();
