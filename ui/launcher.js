@@ -32,6 +32,10 @@ const PROVIDER_LABELS = {
     web:        'Web',
 };
 
+// Providers that should not get a category chip (and are skipped by Tab cycling).
+// They are keyword-driven (e.g. power: "shutdown", "lock") so a chip adds nothing.
+const HIDDEN_CHIP_PROVIDERS = new Set(['power']);
+
 // Text-based provider prefixes.
 // Maps lowercase keyword → provider id.
 // The prefix character (default '/') is prepended at query time from settings.
@@ -515,7 +519,9 @@ export const LauncherWidget = GObject.registerClass(
             this._chips = {};
             const modes = [
                 { id: 'all', label: 'All' },
-                ...this._providerManager.providers.map(p => ({ id: p.id, label: p.label })),
+                ...this._providerManager.providers
+                    .filter(p => !HIDDEN_CHIP_PROVIDERS.has(p.id))
+                    .map(p => ({ id: p.id, label: p.label })),
             ];
 
             for (const mode of modes) {
@@ -1049,7 +1055,9 @@ export const LauncherWidget = GObject.registerClass(
         }
 
         _cycleMode() {
-            const ids = ['all', ...this._providerManager.providers.map(p => p.id)];
+            const ids = ['all', ...this._providerManager.providers
+                .filter(p => !HIDDEN_CHIP_PROVIDERS.has(p.id))
+                .map(p => p.id)];
             const cur = ids.indexOf(this._activeMode);
             this._setMode(ids[(cur + 1) % ids.length]);
         }
