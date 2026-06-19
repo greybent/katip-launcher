@@ -810,6 +810,9 @@ export const LauncherWidget = GObject.registerClass(
                 });
             }
             return [...results].sort((a, b) => {
+                // Pinned results (e.g. a detected URL) always rank first,
+                // regardless of how often other results have been used.
+                if (!!a.forceTop !== !!b.forceTop) return a.forceTop ? -1 : 1;
                 const ha = this._history.getScore(a.id);
                 const hb = this._history.getScore(b.id);
                 return ((hb > 5 ? 1 : 0) - (ha > 5 ? 1 : 0)) || (hb - ha);
