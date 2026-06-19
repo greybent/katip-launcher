@@ -96,8 +96,10 @@ export class AppsProvider extends BaseProvider {
             id:         `app-action:${appId}:${actionName}`,
             title:      appInfo.get_action_name(actionName) || actionName,
             subtitle:   `${appName} · action`,
-            icon:       app.get_icon(),
-            iconName:   null,
+            // Distinct "run" glyph rather than repeating the parent app's icon —
+            // makes action rows easy to tell apart from the app they sit under.
+            icon:       null,
+            iconName:   'system-run-symbolic',
             badgeLabel: 'action',
             badgeStyle: 'blue',
             activate:   () => {
