@@ -139,6 +139,11 @@ export class HistoryManager {
                 Gio.FileCreateFlags.REPLACE_DESTINATION,
                 null
             );
+            // History records reveal usage patterns — keep it owner-only.
+            try {
+                file.set_attribute_uint32('unix::mode', 0o600,
+                    Gio.FileQueryInfoFlags.NONE, null);
+            } catch (_e) {}
         } catch (e) {
             console.warn('[Kapit] HistoryManager: save failed —', e.message);
         }

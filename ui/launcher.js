@@ -21,9 +21,13 @@ const PROVIDER_LABELS = {
     shortcuts:  'Shortcuts',
     command:    'Shell',
     windows:    'Windows',
+    clipboard:  'Clipboard',
     apps:       'Applications',
     files:      'Files',
+    settings:   'Settings',
+    process:    'Processes',
     calculator: 'Calculator',
+    timer:      'Timer',
     web:        'Web',
 };
 
@@ -773,7 +777,7 @@ export const LauncherWidget = GObject.registerClass(
                             if (gen !== this._queryGen) return;
                             // Guard against widget being destroyed before async result arrives
                             if (!this.get_parent()) return;
-                            this._spliceResults(this._applyHistory(results, effectiveText), maxResults);
+                            this._spliceResults(results, maxResults, effectiveText);
                         }).catch(e => console.warn(`[Kapit] async ${provider.id}:`, e.message));
                     } else {
                         syncResults.push(...(Array.isArray(ret) ? ret : []));
@@ -812,19 +816,38 @@ export const LauncherWidget = GObject.registerClass(
             });
         }
 
-        _spliceResults(newResults, maxResults) {
-            this._displayResults([...this._results, ...newResults].slice(0, maxResults));
+        _spliceResults(newResults, maxResults, text) {
+            // Merge late-arriving async results (e.g. Files via Tracker) with the
+            // already-displayed sync results, then re-sort the whole set by
+            // provider priority so they land in their correct position instead of
+            // always appearing last. _applyHistory then applies the history
+            // tie-break while preserving that priority order (stable sort).
+            const merged = [...this._results, ...newResults].sort(
+                (a, b) => (a._providerPriority ?? 99) - (b._providerPriority ?? 99)
+            );
+            this._displayResults(this._applyHistory(merged, text).slice(0, maxResults), true);
         }
 
         // ── Display ───────────────────────────────────────────────────────────
 
-        _displayResults(results) {
+        _displayResults(results, preserveActive = false) {
+            // When async results splice in, keep the user's current selection
+            // instead of snapping back to the top.
+            const prevActiveId = preserveActive
+                ? this._results[this._activeIndex]?.id
+                : null;
+
             for (const item of this._resultItems) item.destroy();
             this._resultItems = [];
             this._resultsBox.remove_all_children();
 
-            this._results     = results;
-            this._activeIndex = results.length > 0 ? 0 : -1;
+            this._results = results;
+            if (prevActiveId != null) {
+                const idx = results.findIndex(r => r.id === prevActiveId);
+                this._activeIndex = idx >= 0 ? idx : (results.length > 0 ? 0 : -1);
+            } else {
+                this._activeIndex = results.length > 0 ? 0 : -1;
+            }
 
             const t           = this._t;
             const showHeaders = this._settings.get_boolean('show-section-headers');
@@ -862,7 +885,7 @@ export const LauncherWidget = GObject.registerClass(
                     lastPriority = priority;
                 }
 
-                const item = new ResultItem(result, i === 0, t);
+                const item = new ResultItem(result, i === this._activeIndex, t);
                 item.actor.connect('enter-event', () => {
                     this._setActiveIndex(i);
                     return Clutter.EVENT_PROPAGATE;

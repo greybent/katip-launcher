@@ -262,7 +262,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
 
         const provToggles = [
             { key: 'enable-windows',    label: 'Open windows',      subtitle: 'Currently open application windows' },
-            { key: 'enable-clipboard',  label: 'Clipboard history', subtitle: 'Recent clipboard entries · off by default' },
+            { key: 'enable-clipboard',  label: 'Clipboard history', subtitle: 'Recent clipboard entries · stored in plaintext · off by default' },
             { key: 'enable-apps',       label: 'Applications',      subtitle: 'Installed desktop applications' },
             { key: 'enable-files',      label: 'Files',             subtitle: 'Files found via GNOME Tracker' },
             { key: 'enable-process',    label: 'Process search',    subtitle: 'Running processes · trigger: proc <name> · off by default' },
@@ -460,7 +460,19 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
         });
         engineUrlRow.set_tooltip_text('Use {query} as the placeholder for the search term');
         engineUrlRow.set_text(settings.get_string('web-search-engine') ?? '');
-        engineUrlRow.connect('apply', () => settings.set_string('web-search-engine', engineUrlRow.get_text()));
+        engineUrlRow.connect('apply', () => {
+            // Must be http(s) — the provider silently refuses anything else at
+            // launch time, so reject it here with visible feedback instead.
+            const url = engineUrlRow.get_text().trim();
+            if (!/^https?:\/\//i.test(url)) {
+                engineUrlRow.add_css_class('error');
+                engineUrlRow.set_tooltip_text('URL must start with https:// or http://');
+                return;
+            }
+            engineUrlRow.remove_css_class('error');
+            engineUrlRow.set_tooltip_text('Use {query} as the placeholder for the search term');
+            settings.set_string('web-search-engine', url);
+        });
         settings.connect('changed::web-search-engine', () => {
             const v = settings.get_string('web-search-engine') ?? '';
             if (engineUrlRow.get_text() !== v) engineUrlRow.set_text(v);

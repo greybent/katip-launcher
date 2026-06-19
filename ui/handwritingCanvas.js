@@ -416,8 +416,9 @@ export class HandwritingCanvas {
     }
 
     // ── MyScript backend ──────────────────────────────────────────────────────
-    // The hmac header must be HMAC-SHA512(body, appKey+hmacKey) in hex.
-    // GJS has no native HMAC so we compute it via openssl subprocess.
+    // The hmac header must be HMAC-SHA512(body, appKey+hmacKey) in hex,
+    // computed in-process via GLib so the secret key never reaches a
+    // subprocess argument list (and thus never /proc/<pid>/cmdline).
 
     _recogniseMyScript() {
         let appKey = '', hmacKey = '';
@@ -451,27 +452,26 @@ export class HandwritingCanvas {
             strokeGroups: [{ strokes }],
         });
 
-        // Compute HMAC-SHA512(payload, appKey+hmacKey) via openssl
+        // Compute HMAC-SHA512(payload, appKey+hmacKey) natively. Shelling out to
+        // `openssl dgst -hmac <key>` would expose the secret key in the process
+        // argument list, readable by any local process via /proc/<pid>/cmdline
+        // (including this extension's own "proc" search). GLib keeps it in-process.
         const userKey = appKey + hmacKey;
-        const proc = new Gio.Subprocess({
-            argv: ['openssl', 'dgst', '-sha512', '-hmac', userKey],
-            flags: Gio.SubprocessFlags.STDIN_PIPE |
-                   Gio.SubprocessFlags.STDOUT_PIPE |
-                   Gio.SubprocessFlags.STDERR_SILENCE,
-        });
-        proc.init(null);
-        proc.communicate_utf8_async(payload, null, (_proc, res) => {
-            try {
-                const [, stdout] = _proc.communicate_utf8_finish(res);
-                // openssl outputs: "HMAC-SHA512(stdin)= <hex>"
-                const hmacHex = (stdout || '').trim().split('=').pop().trim();
-                if (!hmacHex) {
-                    console.warn('[Katip] MyScript: HMAC computation failed');
-                    return;
-                }
-                this._sendMyScript(payload, appKey, hmacHex);
-            } catch (e) { console.warn('[Katip] MyScript HMAC failed:', e.message); }
-        });
+        let hmacHex;
+        try {
+            const keyBytes  = GLib.Bytes.new(new TextEncoder().encode(userKey));
+            const dataBytes = GLib.Bytes.new(new TextEncoder().encode(payload));
+            hmacHex = GLib.compute_hmac_for_bytes(
+                GLib.ChecksumType.SHA512, keyBytes, dataBytes);
+        } catch (e) {
+            console.warn('[Katip] MyScript HMAC failed:', e.message);
+            return;
+        }
+        if (!hmacHex) {
+            console.warn('[Katip] MyScript: HMAC computation failed');
+            return;
+        }
+        this._sendMyScript(payload, appKey, hmacHex);
     }
 
     _sendMyScript(payload, appKey, hmacHex) {

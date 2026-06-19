@@ -54,10 +54,17 @@ export class ClipboardHistory {
             const dir = Gio.File.new_for_path(DATA_DIR);
             if (!dir.query_exists(null))
                 dir.make_directory_with_parents(null);
-            Gio.File.new_for_path(HISTORY_FILE).replace_contents(
+            const file = Gio.File.new_for_path(HISTORY_FILE);
+            file.replace_contents(
                 new TextEncoder().encode(JSON.stringify(history, null, 2)),
                 null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null
             );
+            // Clipboard contents (incl. entries flagged "private") are stored in
+            // plaintext — keep the file owner-only so other local users can't read it.
+            try {
+                file.set_attribute_uint32('unix::mode', 0o600,
+                    Gio.FileQueryInfoFlags.NONE, null);
+            } catch (_e) {}
         } catch (e) {
             console.warn('[Katip] ClipboardHistory: save failed:', e.message);
         }
