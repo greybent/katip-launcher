@@ -145,7 +145,7 @@ export class HistoryManager {
                     Gio.FileQueryInfoFlags.NONE, null);
             } catch (_e) {}
         } catch (e) {
-            console.warn('[Kapit] HistoryManager: save failed —', e.message);
+            console.warn('[Katip] HistoryManager: save failed —', e.message);
         }
     }
 

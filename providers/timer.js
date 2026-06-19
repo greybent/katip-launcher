@@ -106,7 +106,7 @@ export class TimerProvider extends BaseProvider {
             Main.notify(`Timer: ${label}`, `${display} elapsed`);
             return;
         } catch (e) {
-            console.warn('[Kapit] TimerProvider Main.notify failed, trying notify-send:', e.message);
+            console.warn('[Katip] TimerProvider Main.notify failed, trying notify-send:', e.message);
         }
         try {
             Gio.Subprocess.new(
@@ -118,7 +118,7 @@ export class TimerProvider extends BaseProvider {
                 Gio.SubprocessFlags.NONE
             );
         } catch (e) {
-            console.warn('[Kapit] TimerProvider notification error:', e.message);
+            console.warn('[Katip] TimerProvider notification error:', e.message);
         }
     }
 }

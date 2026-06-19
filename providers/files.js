@@ -36,7 +36,7 @@ export class FilesProvider extends BaseProvider {
             );
             this._available = true;
         } catch (e) {
-            console.warn('[Kapit] FilesProvider: Tracker unavailable —', e.message);
+            console.warn('[Katip] FilesProvider: Tracker unavailable —', e.message);
             this._available = false;
         }
     }
@@ -92,7 +92,7 @@ export class FilesProvider extends BaseProvider {
         if (!this._ontology) {
             this._ontology = await this._detectOntology();
             if (!this._ontology) {
-                console.warn('[Kapit] FilesProvider: ontology detection failed');
+                console.warn('[Katip] FilesProvider: ontology detection failed');
                 return [];
             }
         }
@@ -140,7 +140,7 @@ export class FilesProvider extends BaseProvider {
             return results;
 
         } catch (e) {
-            console.warn('[Kapit] FilesProvider Tracker query failed:', e.message);
+            console.warn('[Katip] FilesProvider Tracker query failed:', e.message);
             this._ontology = null;
             return [];
         }

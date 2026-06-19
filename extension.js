@@ -17,7 +17,7 @@ import { HistoryManager }   from './history.js';
 import { ClipboardHistory } from './providers/clipboardHistory.js';
 import { cancelAllTimers }  from './providers/timer.js';
 import { LauncherWidget }   from './ui/launcher.js';
-import { KapitIndicator }   from './ui/panelIndicator.js';
+import { KatipIndicator }   from './ui/panelIndicator.js';
 
 export default class KatipLauncher extends Extension {
     enable() {
@@ -183,7 +183,7 @@ export default class KatipLauncher extends Extension {
     }
 
     _addIndicator() {
-        this._indicator = new KapitIndicator(
+        this._indicator = new KatipIndicator(
             () => this._open(),
             () => this._openPrefs()
         );

@@ -21,7 +21,7 @@ export class ResultItem {
         this._theme  = theme;
 
         this.actor = new St.BoxLayout({
-            style_class: 'kapit-result-item',
+            style_class: 'katip-result-item',
             reactive: true,
             track_hover: true,
             x_expand: true,
@@ -33,7 +33,7 @@ export class ResultItem {
 
     _buildLayout(result, t) {
         const iconBin = new St.Bin({
-            style_class: 'kapit-result-icon',
+            style_class: 'katip-result-icon',
             style: t.resultIcon ?? '',
             width: 36,
             height: 36,
@@ -55,7 +55,7 @@ export class ResultItem {
         });
 
         const titleLabel = new St.Label({
-            style_class: 'kapit-result-title',
+            style_class: 'katip-result-title',
             style: t.resultTitle ?? '',
             text: result.title ?? '',
             x_expand: true,
@@ -63,7 +63,7 @@ export class ResultItem {
         titleLabel.clutter_text.ellipsize = 3;
 
         const subtitleLabel = new St.Label({
-            style_class: 'kapit-result-subtitle',
+            style_class: 'katip-result-subtitle',
             style: t.resultSubtitle ?? '',
             text: result.subtitle ?? '',
             x_expand: true,
@@ -88,10 +88,10 @@ export class ResultItem {
     setActive(active) {
         const t = this._theme;
         if (active) {
-            this.actor.add_style_class_name('kapit-result-item-active');
+            this.actor.add_style_class_name('katip-result-item-active');
             this.actor.set_style(t.resultActive ?? '');
         } else {
-            this.actor.remove_style_class_name('kapit-result-item-active');
+            this.actor.remove_style_class_name('katip-result-item-active');
             this.actor.set_style('');
         }
     }

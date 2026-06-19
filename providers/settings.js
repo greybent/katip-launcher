@@ -74,7 +74,7 @@ export class SettingsProvider extends BaseProvider {
             try {
                 Gio.Subprocess.new(['gnome-control-center', panel], Gio.SubprocessFlags.NONE);
             } catch (e) {
-                console.warn('[Kapit] SettingsProvider: cannot open panel', panel, e.message);
+                console.warn('[Katip] SettingsProvider: cannot open panel', panel, e.message);
             }
         }
     }

@@ -22,7 +22,7 @@
     </key>
     <key name="show-panel-indicator" type="b">
       <default>true</default>
-      <summary>Show Kapit icon in the top panel</summary>
+      <summary>Show Katip icon in the top panel</summary>
     </key>
 
     <key name="enable-windows" type="b">

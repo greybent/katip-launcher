@@ -114,7 +114,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
         // Panel indicator
         const indicatorRow = new Adw.SwitchRow({
             title: 'Show panel icon',
-            subtitle: 'Display Kapit icon in the top bar for quick access',
+            subtitle: 'Display Katip icon in the top bar for quick access',
         });
         settings.bind('show-panel-indicator', indicatorRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         appearGroup.add(indicatorRow);

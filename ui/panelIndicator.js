@@ -12,13 +12,13 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 /**
- * KapitIndicator — top-bar panel button with right-click menu.
+ * KatipIndicator — top-bar panel button with right-click menu.
  *
  * Left-click  → open launcher
  * Right-click → popup menu (Open launcher / Settings / Disable)
  */
-export const KapitIndicator = GObject.registerClass(
-    class KapitIndicator extends PanelMenu.Button {
+export const KatipIndicator = GObject.registerClass(
+    class KatipIndicator extends PanelMenu.Button {
 
         _init(onOpen, onPrefs) {
             super._init(0.0, 'Katip Launcher');

@@ -58,7 +58,7 @@ export class ProviderManager {
                 };
                 this._providers.push(provider);
             } catch (e) {
-                console.error(`[Kapit] Failed to load provider ${Cls.name}:`, e);
+                console.error(`[Katip] Failed to load provider ${Cls.name}:`, e);
             }
         }
         this._providers.sort((a, b) => a.priority - b.priority);

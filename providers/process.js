@@ -65,7 +65,7 @@ export class ProcessProvider extends BaseProvider {
             }
             return results;
         } catch (e) {
-            console.warn('[Kapit] ProcessProvider error:', e.message);
+            console.warn('[Katip] ProcessProvider error:', e.message);
             return [];
         }
     }
@@ -75,7 +75,7 @@ export class ProcessProvider extends BaseProvider {
             if (!/^\d+$/.test(pid)) return; // safety guard
             Gio.Subprocess.new(['kill', pid], Gio.SubprocessFlags.NONE);
         } catch (e) {
-            console.warn('[Kapit] ProcessProvider kill error:', e.message);
+            console.warn('[Katip] ProcessProvider kill error:', e.message);
         }
     }
 
@@ -111,7 +111,7 @@ export class ProcessProvider extends BaseProvider {
             );
             Gio.AppInfo.launch_default_for_uri(`file://${tmpPath}`, null);
         } catch (e) {
-            console.warn('[Kapit] ProcessProvider show details error:', e.message);
+            console.warn('[Katip] ProcessProvider show details error:', e.message);
         }
     }
 }

@@ -91,7 +91,7 @@ export class CommandProvider extends BaseProvider {
             // are not swallowed by a silent launch.
             return true;
         } catch (e) {
-            console.warn('[Kapit] CommandProvider._likelyNeedsTerminal error:', e.message);
+            console.warn('[Katip] CommandProvider._likelyNeedsTerminal error:', e.message);
             return true; // safe default
         }
     }
@@ -103,7 +103,7 @@ export class CommandProvider extends BaseProvider {
             const proc = Gio.Subprocess.new(argv, Gio.SubprocessFlags.NONE);
             proc.wait_async(null, null); // don't block
         } catch (e) {
-            console.warn('[Kapit] CommandProvider silent launch failed:', e.message);
+            console.warn('[Katip] CommandProvider silent launch failed:', e.message);
             // Fallback to terminal
             const terminal = this._settings.get_string('terminal-app') || 'ptyxis';
             this._runInTerminal(cmd, terminal);
@@ -128,7 +128,7 @@ export class CommandProvider extends BaseProvider {
             }
             Gio.Subprocess.new(argv, Gio.SubprocessFlags.NONE);
         } catch (e) {
-            console.warn('[Kapit] CommandProvider terminal launch failed:', e.message);
+            console.warn('[Katip] CommandProvider terminal launch failed:', e.message);
         }
     }
 }

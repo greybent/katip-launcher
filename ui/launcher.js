@@ -416,7 +416,7 @@ export const LauncherWidget = GObject.registerClass(
             const t = this._t;
 
             this._searchRow = new St.BoxLayout({
-                style_class: 'kapit-search-row',
+                style_class: 'katip-search-row',
                 style: t.searchRow,
                 x_expand: true,
             });
@@ -429,7 +429,7 @@ export const LauncherWidget = GObject.registerClass(
             }));
 
             this._entry = new St.Entry({
-                style_class: 'kapit-search-entry',
+                style_class: 'katip-search-entry',
                 style: t.searchEntry,
                 hint_text: 'Search apps, files, calculate…',
                 x_expand: true,
@@ -442,14 +442,14 @@ export const LauncherWidget = GObject.registerClass(
 
             this._escLabel = new St.Label({
                 text: 'Esc',
-                style_class: 'kapit-kbd-hint',
+                style_class: 'katip-kbd-hint',
                 style: t.kbd,
                 y_align: Clutter.ActorAlign.CENTER,
             });
             this._searchRow.add_child(this._escLabel);
 
             const settingsBtn = new St.Button({
-                style_class: 'kapit-settings-btn',
+                style_class: 'katip-settings-btn',
                 style: t.settingsBtn,
                 can_focus: false,
                 reactive: true,
@@ -506,7 +506,7 @@ export const LauncherWidget = GObject.registerClass(
 
             // ── Category chips ─────────────────────────────────────────────
             this._chipBox = new St.BoxLayout({
-                style_class: 'kapit-chip-row',
+                style_class: 'katip-chip-row',
                 style: t.chipRow,
                 x_expand: true,
             });
@@ -521,7 +521,7 @@ export const LauncherWidget = GObject.registerClass(
                 const isActive = mode.id === 'all';
                 const chip = new St.Button({
                     label: mode.label,
-                    style_class: 'kapit-chip',
+                    style_class: 'katip-chip',
                     style: isActive ? t.chipActive : t.chip,
                     reactive: true,
                     track_hover: true,
@@ -550,7 +550,7 @@ export const LauncherWidget = GObject.registerClass(
             this._resultsBox = new St.BoxLayout({
                 orientation: Clutter.Orientation.VERTICAL,
                 x_expand: true,
-                style_class: 'kapit-results-box',
+                style_class: 'katip-results-box',
             });
             this.add_child(this._resultsBox);
         }
@@ -559,7 +559,7 @@ export const LauncherWidget = GObject.registerClass(
             const t = this._t;
 
             this._footer = new St.BoxLayout({
-                style_class: 'kapit-footer',
+                style_class: 'katip-footer',
                 style: t.footer,
                 x_expand: true,
             });
@@ -570,7 +570,7 @@ export const LauncherWidget = GObject.registerClass(
                 const hint = new St.BoxLayout({ style: 'margin-right: 14px;' });
                 const keyLbl = new St.Label({
                     text: key,
-                    style_class: 'kapit-kbd-hint',
+                    style_class: 'katip-kbd-hint',
                     style: t.kbd,
                     y_align: Clutter.ActorAlign.CENTER,
                 });
@@ -589,7 +589,7 @@ export const LauncherWidget = GObject.registerClass(
             this._altHintBox = new St.BoxLayout({ style: 'margin-right: 14px;', visible: false });
             this._altHintBox.add_child(new St.Label({
                 text: 'Ctrl+↵',
-                style_class: 'kapit-kbd-hint',
+                style_class: 'katip-kbd-hint',
                 style: t.kbd,
                 y_align: Clutter.ActorAlign.CENTER,
             }));
@@ -778,12 +778,12 @@ export const LauncherWidget = GObject.registerClass(
                             // Guard against widget being destroyed before async result arrives
                             if (!this.get_parent()) return;
                             this._spliceResults(results, maxResults, effectiveText);
-                        }).catch(e => console.warn(`[Kapit] async ${provider.id}:`, e.message));
+                        }).catch(e => console.warn(`[Katip] async ${provider.id}:`, e.message));
                     } else {
                         syncResults.push(...(Array.isArray(ret) ? ret : []));
                     }
                 } catch (e) {
-                    console.warn(`[Kapit] provider ${provider.id} threw:`, e.message);
+                    console.warn(`[Katip] provider ${provider.id} threw:`, e.message);
                 }
             }
 
@@ -864,18 +864,18 @@ export const LauncherWidget = GObject.registerClass(
                     const label = (PROVIDER_LABELS[providerId] ?? providerId).toUpperCase();
 
                     const headerRow = new St.BoxLayout({
-                        style_class: 'kapit-section-header',
+                        style_class: 'katip-section-header',
                         x_expand: true,
                         y_align: Clutter.ActorAlign.CENTER,
                     });
                     headerRow.add_child(new St.Label({
                         text: label,
-                        style_class: 'kapit-section-label',
+                        style_class: 'katip-section-label',
                         style: t.sectionLabel,
                         y_align: Clutter.ActorAlign.CENTER,
                     }));
                     const line = new St.Widget({
-                        style_class: 'kapit-section-line',
+                        style_class: 'katip-section-line',
                         style: t.sectionLine,
                         x_expand: true,
                         y_align: Clutter.ActorAlign.CENTER,
