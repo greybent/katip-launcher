@@ -262,6 +262,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
 
         const provToggles = [
             { key: 'enable-windows',    label: 'Open windows',      subtitle: 'Currently open application windows' },
+            { key: 'enable-power',      label: 'Power actions',     subtitle: 'Lock, suspend, log out, restart, shut down · destructive actions ask to confirm' },
             { key: 'enable-clipboard',  label: 'Clipboard history', subtitle: 'Recent clipboard entries · stored in plaintext · off by default' },
             { key: 'enable-apps',       label: 'Applications',      subtitle: 'Installed desktop applications' },
             { key: 'enable-files',      label: 'Files',             subtitle: 'Files found via GNOME Tracker' },
@@ -281,6 +282,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
         // All user-visible provider IDs in their default order
         const ORDER_DEFAULTS = [
             { id: 'windows',    label: 'Open windows' },
+            { id: 'power',      label: 'Power actions' },
             { id: 'clipboard',  label: 'Clipboard' },
             { id: 'apps',       label: 'Applications' },
             { id: 'files',      label: 'Files' },
@@ -399,6 +401,16 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
                 });
                 settings.bind('clipboard-max-history', histSizeRow, 'value', Gio.SettingsBindFlags.DEFAULT);
                 provGroup.add(histSizeRow);
+            }
+
+            // Extra setting for application desktop actions
+            if (key === 'enable-apps') {
+                const appActionsRow = new Adw.SwitchRow({
+                    title: 'Application actions',
+                    subtitle: 'Show desktop actions like "New Window" or "New Private Window"',
+                });
+                settings.bind('enable-app-actions', appActionsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+                provGroup.add(appActionsRow);
             }
         }
 
