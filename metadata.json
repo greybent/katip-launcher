@@ -2,7 +2,7 @@
   "name": "Katip Launcher",
   "description": "A KRunner/Ulauncher-style application launcher for GNOME Shell",
   "uuid": "katip-launcher@local",
-  "version": 80,
+  "version": 81,
   "shell-version": [
     "45",
     "46",

@@ -6,6 +6,7 @@
 import { ShortcutsProvider }   from './providers/shortcuts.js';
 import { CommandProvider }     from './providers/command.js';
 import { WindowsProvider }     from './providers/windows.js';
+import { PowerProvider }       from './providers/power.js';
 import { ClipboardProvider }   from './providers/clipboard.js';
 import { AppsProvider }        from './providers/apps.js';
 import { FilesProvider }       from './providers/files.js';
@@ -19,6 +20,7 @@ const REGISTRY = [
     { key: 'enable-shortcuts',  Cls: ShortcutsProvider,  alwaysOn: true },
     { key: 'enable-command',    Cls: CommandProvider,     alwaysOn: true },
     { key: 'enable-windows',    Cls: WindowsProvider },
+    { key: 'enable-power',      Cls: PowerProvider },
     { key: 'enable-clipboard',  Cls: ClipboardProvider },
     { key: 'enable-apps',       Cls: AppsProvider },
     { key: 'enable-files',      Cls: FilesProvider },

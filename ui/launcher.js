@@ -21,6 +21,7 @@ const PROVIDER_LABELS = {
     shortcuts:  'Shortcuts',
     command:    'Shell',
     windows:    'Windows',
+    power:      'Power',
     clipboard:  'Clipboard',
     apps:       'Applications',
     files:      'Files',
@@ -916,6 +917,10 @@ export const LauncherWidget = GObject.registerClass(
                         return Clutter.EVENT_STOP;
                     } else {
                         this._activateResult(result);
+                        if (result.activateKeepOpen) {
+                            this._runQuery(this._entry.get_text());
+                            return Clutter.EVENT_STOP;
+                        }
                     }
                     this._closeAfterActivation();
                     return Clutter.EVENT_STOP;
@@ -1025,6 +1030,12 @@ export const LauncherWidget = GObject.registerClass(
                         return Clutter.EVENT_STOP;
                     } else {
                         this._activateResult(result);
+                        if (result.activateKeepOpen) {
+                            // Keep the launcher open and re-render (e.g. a power
+                            // action arming its Enter-to-confirm step).
+                            this._runQuery(this._entry.get_text());
+                            return Clutter.EVENT_STOP;
+                        }
                     }
                     this._closeAfterActivation();
                 }
