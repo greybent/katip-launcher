@@ -44,6 +44,10 @@ export class WebProvider extends BaseProvider {
                 iconName:   'web-browser-symbolic',
                 badgeLabel: 'url',
                 badgeStyle: 'teal',
+                // A typed-out URL is almost always what the user wants — pin it
+                // above everything, regardless of how often the search result
+                // below has been used.
+                forceTop:   true,
                 activate:   () => {
                     if (/^https?:\/\//i.test(url))
                         Gio.AppInfo.launch_default_for_uri(url, null);
