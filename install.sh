@@ -45,7 +45,7 @@ if ! GSETTINGS_SCHEMA_DIR="$INSTALL_DIR/schemas" \
     SCHEMA_NEEDS_LOGOUT=true
 else
     # Schema is visible — check if the session's compiled version has all keys
-    SESSION_KEY_COUNT=$(gsettings list-keys "$SCHEMA_ID" 2>/dev/null | wc -l || echo 0)
+    SESSION_KEY_COUNT=$(( $(gsettings list-keys "$SCHEMA_ID" 2>/dev/null | wc -l) ))
     if [ "$SESSION_KEY_COUNT" -lt "$SOURCE_KEY_COUNT" ]; then
         SCHEMA_NEEDS_LOGOUT=true
     fi
