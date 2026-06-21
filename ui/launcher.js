@@ -897,6 +897,16 @@ export const LauncherWidget = GObject.registerClass(
 
                 const item = new ResultItem(result, i === this._activeIndex, t);
                 item.actor.connect('enter-event', () => {
+                    // Ignore the synthetic crossing event Clutter emits when a
+                    // freshly-rebuilt row lands under a motionless pointer — it
+                    // would override the default top-result selection without the
+                    // user actually moving the mouse. Honour hover only once the
+                    // pointer has genuinely moved from where it was at display time.
+                    const [px, py] = global.get_pointer();
+                    if (this._pointerOnDisplay &&
+                        px === this._pointerOnDisplay[0] &&
+                        py === this._pointerOnDisplay[1])
+                        return Clutter.EVENT_PROPAGATE;
                     this._setActiveIndex(i);
                     return Clutter.EVENT_PROPAGATE;
                 });
@@ -934,6 +944,11 @@ export const LauncherWidget = GObject.registerClass(
                 this._resultItems.push(item);
                 this._resultsBox.add_child(item.actor);
             }
+
+            // Snapshot the pointer position so the per-row enter handler can tell
+            // a real hover (pointer moved) from a synthetic crossing caused by
+            // rebuilding the list under a motionless pointer.
+            this._pointerOnDisplay = global.get_pointer();
 
             this._updateAltHint();
         }
