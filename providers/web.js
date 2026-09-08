@@ -37,7 +37,10 @@ export class WebProvider extends BaseProvider {
             const url = hasScheme ? trimmed : `https://${trimmed}`;
 
             results.push({
-                id:         'web:url',
+                // Per-URL id. A constant id here would accumulate one launch
+                // count shared by every URL ever opened, which the history
+                // ranking then reads as "this exact result is always wanted".
+                id:         `web:url:${url.slice(0, 128)}`,
                 title:      `Open ${trimmed}`,
                 subtitle:   url,
                 icon:       null,
@@ -61,7 +64,14 @@ export class WebProvider extends BaseProvider {
         const searchUrl   = engineUrl.replaceAll('{query}', encodeURIComponent(trimmed));
 
         results.push({
-            id:         'web:search',
+            // Per-query id, matching the fix applied to clipboard entries in
+            // v78. With the previous constant 'web:search', every web search
+            // ever run incremented one shared counter, so after a handful of
+            // uses the history boost pinned "Search …" to the top of *every*
+            // query — including ones where the user had named another provider
+            // outright. Keyed by query, the boost now means what it says:
+            // this particular search is one you run often.
+            id:         `web:search:${trimmed.slice(0, 128)}`,
             title:      `Search "${trimmed}"`,
             subtitle:   `Open in ${engineLabel}`,
             icon:       null,

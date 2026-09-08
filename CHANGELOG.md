@@ -1,6 +1,15 @@
 # Changelog
 
-## v85 (current)
+## v86 (current)
+
+Fixes trigger keywords being outranked by the web search result.
+
+- **Fix:** `settings`, `timer` and `proc` were missing from the launcher's prefix routing tables entirely. Only `shell` was registered, so typing `settings wifi` ran *every* provider rather than routing to the Settings provider. All four triggers now route exclusively to their provider, as `shell` already did
+- **Fix:** `WebProvider` used the constant result IDs `web:search` and `web:url`, so every web search ever run incremented one shared history counter. Once that counter passed the ranking threshold, "Search …" was pinned to the top of *every* query — because with query text present the ranking ignores provider priority and sorts on history score alone. IDs are now keyed by query, the same fix applied to clipboard entries in v78. Repeating a search you actually run often still boosts it; an unrelated query no longer inherits the boost
+- **Fix:** the passthrough routing branch ignored `PREFIX_REQUIRES_ENABLED`. With the process provider disabled, `proc foo` would have routed to a provider that is not loaded and shown nothing at all; it now falls through to a normal search
+- **Fix:** `SettingsProvider` trimmed both ends of the query before testing its trigger, turning `"settings "` back into `"settings"`, which does not match `"settings "`. The bare trigger therefore matched no panels, even though the filter is written to list all of them when the search term is empty. Typing `settings ` now lists every panel
+
+## v85
 
 - **Feature:** About page in Settings — app icon, name and version, a Details group (version, extension UUID, supported GNOME Shell range, GTK/libadwaita versions, install location), Links (source, issue tracker, changelog, blog post), and Legal (copyright, credits, expandable MIT license text read from the shipped `LICENSE` file)
 - **Feature:** "Copy version info" button puts the full environment block on the clipboard for bug reports

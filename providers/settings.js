@@ -40,12 +40,16 @@ export class SettingsProvider extends BaseProvider {
     get priority() { return 12; } // between command and windows
 
     query(text) {
-        const trimmed = text.trim().toLowerCase();
+        // trimStart, not trim: trimming the end turned "settings " back into
+        // "settings", which does not start with the trigger, so the bare
+        // trigger matched nothing at all — even though the filter below is
+        // written to list every panel when the needle is empty.
+        const lower = text.toLowerCase().trimStart();
 
         // Only activate when text starts with "settings "
-        if (!trimmed.startsWith(TRIGGER)) return [];
+        if (!lower.startsWith(TRIGGER)) return [];
 
-        const needle = trimmed.slice(TRIGGER.length).trim();
+        const needle = lower.slice(TRIGGER.length).trim();
 
         const matches = PANELS.filter(p =>
             !needle ||

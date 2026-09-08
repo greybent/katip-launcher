@@ -87,10 +87,19 @@ Click a filter chip at the top of the launcher, or type a keyword followed by a 
 | `win teams` | Open windows matching "teams" |
 | `app gnome` | Applications matching "gnome" |
 | `clip password` | Clipboard entries containing "password" |
+| `settings wifi` | GNOME Settings panels matching "wifi" |
+| `settings ` | Every GNOME Settings panel |
+| `timer 25m` | Timer only |
+| `proc firefox` | Running processes matching "firefox" |
+| `shell htop` | Shell command only |
 | `/web rust news` | Web search only |
 | `/search rust news` | Web search only |
 
 The prefix character (default `/`) is configurable in Settings → General.
+
+A keyword filters **exclusively** — no other provider's results are mixed in. So
+`settings wifi` shows Settings panels and nothing else, and a keyword with no
+match shows nothing rather than falling back to a web search.
 
 ### Shell commands
 Type `shell ` followed by any command:
