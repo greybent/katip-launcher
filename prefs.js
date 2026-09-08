@@ -276,7 +276,10 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
             { kw: 'calc, calculator',     desc: 'Calculator' },
             { kw: 'web, search',          desc: 'Web search (use /web or /search)' },
             { kw: 'shell',                desc: 'Shell command' },
+            { kw: 'settings',             desc: 'GNOME Settings panels' },
+            { kw: 'timer',                desc: 'Countdown timers' },
             { kw: 'clip, clipboard',      desc: 'Clipboard history (only when enabled)' },
+            { kw: 'proc',                 desc: 'Running processes (only when enabled)' },
         ];
         for (const { kw, desc } of keywords) {
             kwGroup.add(new Adw.ActionRow({ title: kw, subtitle: desc }));

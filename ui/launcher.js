@@ -69,9 +69,18 @@ const PREFIXED_ONLY = {};
 
 // Keywords that route to a provider but pass the FULL original text (including
 // the keyword itself) to the provider, because the provider parses its own trigger.
-// 'shell' is handled this way — CommandProvider expects "shell <cmd>" intact.
+//
+// Every provider with a textual trigger belongs here. Without an entry the
+// keyword is not routing at all: each provider still recognises its own trigger,
+// but so does every other provider get to run, and once the query has text the
+// ranking ignores provider priority entirely (see _applyHistory) — so a
+// frequently-used result such as the web search outranks the thing the user
+// explicitly asked for by name.
 const PASSTHROUGH_PREFIXES = {
-    'shell': 'command',
+    'shell':    'command',   // CommandProvider  expects "shell <cmd>" intact
+    'settings': 'settings',  // SettingsProvider expects "settings <panel>"
+    'timer':    'timer',     // TimerProvider    expects "timer <duration>"
+    'proc':     'process',   // ProcessProvider  expects "proc <name>"
 };
 
 // Maps org.gnome.desktop.interface accent-color string values to hex colors.
@@ -727,8 +736,20 @@ export const LauncherWidget = GObject.registerClass(
 
                 // Passthrough: route to provider but keep full text intact
                 if (PASSTHROUGH_PREFIXES[keyword]) {
+                    const pid = PASSTHROUGH_PREFIXES[keyword];
+                    // Honour the provider's enable toggle, exactly as the
+                    // TEXT_PREFIXES branch below does. Routing to a disabled
+                    // provider would filter the provider list down to nothing
+                    // and show no results at all, instead of falling through to
+                    // a normal all-provider search.
+                    const requiredKey = PREFIX_REQUIRES_ENABLED[pid];
+                    if (requiredKey) {
+                        try {
+                            if (!this._settings.get_boolean(requiredKey)) return null;
+                        } catch (_e) { return null; }
+                    }
                     return {
-                        providerId:  PASSTHROUGH_PREFIXES[keyword],
+                        providerId:  pid,
                         searchText:  text,   // full text — provider parses its own trigger
                         prefixUsed:  keyword,
                         passthrough: true,
