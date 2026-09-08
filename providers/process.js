@@ -4,8 +4,8 @@
 'use strict';
 
 import { BaseProvider } from './base.js';
-import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
+import { makeTmpPath, pruneStale } from '../secureTmp.js';
 
 const TRIGGER = 'proc ';
 
@@ -14,60 +14,84 @@ export class ProcessProvider extends BaseProvider {
     get label()    { return 'Processes'; }
     get priority() { return 35; } // after files, before calculator
 
-    query(text) {
+    // Runs `ps` without blocking the compositor. GNOME Shell is single
+    // threaded, so a synchronous spawn here would freeze the whole desktop
+    // for the duration of every keystroke.
+    _spawnRead(argv) {
+        return new Promise(resolve => {
+            let proc;
+            try {
+                proc = Gio.Subprocess.new(argv,
+                    Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE);
+            } catch (e) {
+                console.warn('[Katip] ProcessProvider spawn failed:', e.message);
+                resolve('');
+                return;
+            }
+            proc.communicate_utf8_async(null, null, (p, res) => {
+                try {
+                    const [, stdout] = p.communicate_utf8_finish(res);
+                    resolve(stdout ?? '');
+                } catch (e) {
+                    console.warn('[Katip] ProcessProvider read failed:', e.message);
+                    resolve('');
+                }
+            });
+        });
+    }
+
+    async query(text) {
         const trimmed = text.trim();
         if (!trimmed.toLowerCase().startsWith(TRIGGER)) return [];
 
         const needle = trimmed.slice(TRIGGER.length).trim().toLowerCase();
         if (!needle) return [];
 
-        try {
-            const [ok, stdout] = GLib.spawn_command_line_sync(
-                `ps -eo pid,comm,args --no-headers`
-            );
-            if (!ok || !stdout) return [];
+        // "pid=,args=" gives exactly two fields with args last, so a process
+        // name containing spaces cannot bleed into the wrong column the way it
+        // does with a three-field "pid,comm,args" format.
+        const output = await this._spawnRead(['ps', '-eo', 'pid=,args=']);
+        if (!output) return [];
 
-            const output = new TextDecoder().decode(stdout);
-            const results = [];
+        const results = [];
 
-            for (const line of output.split('\n')) {
-                const parts = line.trim().split(/\s+/);
-                if (parts.length < 2) continue;
+        for (const line of output.split('\n')) {
+            const m = /^\s*(\d+)\s+(.*\S)\s*$/.exec(line);
+            if (!m) continue;
 
-                const pid  = parts[0];
-                const comm = parts[1];
-                const args = parts.slice(2).join(' ');
+            const pid  = m[1];
+            const args = m[2];
 
-                // Validate PID is a positive integer before any shell use
-                if (!/^\d+$/.test(pid)) continue;
+            // Kernel threads are reported as "[kthreadd]" and have nothing to show
+            if (args.startsWith('[') && args.endsWith(']')) continue;
 
-                if (!comm.toLowerCase().includes(needle) &&
-                    !args.toLowerCase().includes(needle)) continue;
+            // Display name: basename of argv[0], e.g. "/usr/bin/firefox" → "firefox"
+            const argv0 = args.split(/\s+/)[0];
+            const comm  = argv0.slice(argv0.lastIndexOf('/') + 1);
 
-                // Skip kernel threads (no args) and the ps command itself
-                if (!args || comm === 'ps') continue;
+            // Skip the `ps` invocation we just made ourselves
+            if (comm === 'ps') continue;
 
-                const preview = args.length > 60 ? args.slice(0, 60) + '…' : args;
-                results.push({
-                    id:               `process:${pid}`,
-                    title:            `${comm} (${pid})`,
-                    subtitle:         preview,
-                    icon:             null,
-                    iconName:         'system-run-symbolic',
-                    badgeLabel:       'proc',
-                    badgeStyle:       'amber',
-                    activate:         () => this._killProcess(pid, comm),
-                    activateAlt:      () => this._showDetails(pid),
-                    activateAltLabel: 'Show details',
-                });
+            if (!comm.toLowerCase().includes(needle) &&
+                !args.toLowerCase().includes(needle)) continue;
 
-                if (results.length >= 20) break;
-            }
-            return results;
-        } catch (e) {
-            console.warn('[Katip] ProcessProvider error:', e.message);
-            return [];
+            const preview = args.length > 60 ? args.slice(0, 60) + '…' : args;
+            results.push({
+                id:               `process:${pid}`,
+                title:            `${comm} (${pid})`,
+                subtitle:         preview,
+                icon:             null,
+                iconName:         'system-run-symbolic',
+                badgeLabel:       'proc',
+                badgeStyle:       'amber',
+                activate:         () => this._killProcess(pid, comm),
+                activateAlt:      () => this._showDetails(pid),
+                activateAltLabel: 'Show details',
+            });
+
+            if (results.length >= 20) break;
         }
+        return results;
     }
 
     _killProcess(pid, _comm) {
@@ -79,20 +103,14 @@ export class ProcessProvider extends BaseProvider {
         }
     }
 
-    _showDetails(pid) {
+    async _showDetails(pid) {
         try {
             if (!/^\d+$/.test(pid)) return; // safety guard
 
             const lines = [];
 
-            try {
-                const psProc = Gio.Subprocess.new(
-                    ['ps', '-p', pid, '-f'],
-                    Gio.SubprocessFlags.STDOUT_PIPE
-                );
-                const [, psOut] = psProc.communicate_utf8(null, null);
-                if (psOut) lines.push(psOut.trim());
-            } catch (_e) {}
+            const psOut = await this._spawnRead(['ps', '-p', pid, '-f']);
+            if (psOut) lines.push(psOut.trim());
 
             lines.push('');
 
@@ -102,13 +120,21 @@ export class ProcessProvider extends BaseProvider {
                 lines.push(new TextDecoder().decode(statusBytes).trim());
             } catch (_e) {}
 
-            const tmpPath = GLib.build_filenamev([
-                GLib.get_tmp_dir(), `katip-proc-${pid}.txt`,
-            ]);
+            // Process details are written to a private 0700 directory under an
+            // unpredictable name, not to a guessable path in the shared /tmp.
+            pruneStale();
+            const tmpPath = makeTmpPath(`proc-${pid}`, '.txt');
+            if (!tmpPath) return;
+
             Gio.File.new_for_path(tmpPath).replace_contents(
                 new TextEncoder().encode(lines.join('\n')),
-                null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null
+                null, false,
+                Gio.FileCreateFlags.REPLACE_DESTINATION | Gio.FileCreateFlags.PRIVATE,
+                null
             );
+            // Handed to an external viewer, so it cannot be deleted here —
+            // pruneStale() above clears it on a later run, and the runtime dir
+            // is wiped at logout.
             Gio.AppInfo.launch_default_for_uri(`file://${tmpPath}`, null);
         } catch (e) {
             console.warn('[Katip] ProcessProvider show details error:', e.message);

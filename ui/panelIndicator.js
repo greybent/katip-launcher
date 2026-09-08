@@ -20,11 +20,12 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 export const KatipIndicator = GObject.registerClass(
     class KatipIndicator extends PanelMenu.Button {
 
-        _init(onOpen, onPrefs) {
+        _init(onOpen, onPrefs, extensionPath = null) {
             super._init(0.0, 'Katip Launcher');
 
             this._onOpen  = onOpen;
             this._onPrefs = onPrefs;
+            this._extensionPath = extensionPath;
 
             // Panel icon — use symbolic SVG from our icons/ folder
             const icon = new St.Icon({
@@ -77,15 +78,22 @@ export const KatipIndicator = GObject.registerClass(
         }
 
         _getIconPath() {
-            // Walk up from this file to find the extension root
-            // Extensions live at: ~/.local/share/gnome-shell/extensions/katip-launcher@local/
-            const candidates = [
+            // Prefer the real install directory handed to us by the Extension
+            // object — a system-wide install lives under /usr/share, not under
+            // ~/.local, and hardcoding the latter silently lost the icon there.
+            const candidates = [];
+            if (this._extensionPath) {
+                candidates.push(GLib.build_filenamev([
+                    this._extensionPath, 'icons', 'katip-launcher-symbolic.svg',
+                ]));
+            }
+            candidates.push(
                 GLib.build_filenamev([
                     GLib.get_home_dir(),
                     '.local', 'share', 'gnome-shell', 'extensions',
                     'katip-launcher@local', 'icons', 'katip-launcher-symbolic.svg',
-                ]),
-            ];
+                ])
+            );
             for (const p of candidates) {
                 if (GLib.file_test(p, GLib.FileTest.EXISTS)) return p;
             }

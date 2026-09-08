@@ -51,16 +51,21 @@ export class ClipboardHistory {
 
     _save(history) {
         try {
-            const dir = Gio.File.new_for_path(DATA_DIR);
-            if (!dir.query_exists(null))
-                dir.make_directory_with_parents(null);
+            // 0700 from the start — the directory name is predictable, so it must
+            // never be traversable by other local users.
+            GLib.mkdir_with_parents(DATA_DIR, 0o700);
             const file = Gio.File.new_for_path(HISTORY_FILE);
+            // Clipboard contents (incl. entries flagged "private") are stored in
+            // plaintext. PRIVATE creates the replacement file owner-only, closing
+            // the window in which it existed at the umask default (usually 0644)
+            // between being written and being chmod'ed.
             file.replace_contents(
                 new TextEncoder().encode(JSON.stringify(history, null, 2)),
-                null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null
+                null, false,
+                Gio.FileCreateFlags.REPLACE_DESTINATION | Gio.FileCreateFlags.PRIVATE,
+                null
             );
-            // Clipboard contents (incl. entries flagged "private") are stored in
-            // plaintext — keep the file owner-only so other local users can't read it.
+            // Belt and braces: fixes the mode on files written by earlier versions.
             try {
                 file.set_attribute_uint32('unix::mode', 0o600,
                     Gio.FileQueryInfoFlags.NONE, null);

@@ -182,6 +182,10 @@ export class FilesProvider extends BaseProvider {
                             visited++;
                             if (visited >= SCAN_MAX_FILES) break;
                             if (results.length >= maxResults) break;
+                            // Checked per entry, not just per directory: a single
+                            // directory with thousands of files would otherwise
+                            // run to completion and blow the whole budget.
+                            if (Date.now() > deadline) break;
 
                             const name     = info.get_name();
                             const fileType = info.get_file_type();

@@ -8,6 +8,7 @@ import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Soup from 'gi://Soup?version=3.0';
+import { makeTmpPath, deleteQuietly } from '../secureTmp.js';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -76,6 +77,12 @@ export class HandwritingCanvas {
         this._clearId       = null;
         this._soup          = null;
         this._entryRef      = null; // reference to the search entry actor
+        // Recognition outlives the canvas: the launcher destroys this object on
+        // close, but an HTTP round trip or a tesseract run can still be in
+        // flight. The cancellable stops them; _destroyed makes any callback
+        // that still lands a no-op instead of touching freed actors.
+        this._destroyed     = false;
+        this._cancellable   = new Gio.Cancellable();
 
         // Callbacks set by caller
         this.onTextRecognised = null;
@@ -124,7 +131,7 @@ export class HandwritingCanvas {
 
     // Reposition overlay to cover the entry. Call when launcher opens/resizes.
     reposition() {
-        if (!this._entryRef) return;
+        if (this._destroyed || !this._entryRef) return;
 
         // get_transformed_position() returns the actor's absolute stage coords
         const [ex, ey] = this._entryRef.get_transformed_position();
@@ -171,8 +178,12 @@ export class HandwritingCanvas {
         const STEP_MS = 20;    // 20 steps × 20ms = 400ms
         const delta   = TARGET / STEPS;
         this._fadeId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, STEP_MS, () => {
+            if (this._destroyed) {
+                this._fadeId = null;
+                return GLib.SOURCE_REMOVE;
+            }
             this._tintAlpha = Math.min(TARGET, (this._tintAlpha ?? 0) + delta);
-            this._drawArea.queue_repaint();
+            this._drawArea?.queue_repaint();
             if (this._tintAlpha >= TARGET - 0.0001) {
                 this._fadeId = null;
                 return GLib.SOURCE_REMOVE;
@@ -185,11 +196,14 @@ export class HandwritingCanvas {
         this._cancelIdle();
         this._cancelClear();
         this._cancelFade();
+        if (this._destroyed) return;
         this._tintAlpha = 0;
-        this.widget.reactive    = false;
-        this.widget.visible     = false;
-        this._borderBox.visible = false;
-        this._borderBox.style   = 'background: transparent;';
+        this.widget.reactive = false;
+        this.widget.visible  = false;
+        if (this._borderBox) {
+            this._borderBox.visible = false;
+            this._borderBox.style   = 'background: transparent;';
+        }
         this._clearStrokes();
         if (this.onCanvasHidden) this.onCanvasHidden();
     }
@@ -203,11 +217,17 @@ export class HandwritingCanvas {
     }
 
     destroy() {
+        // Mark destroyed first: every async recognition callback checks this
+        // before touching an actor, so a response that lands mid-teardown is
+        // dropped rather than dereferencing a freed widget.
+        this._destroyed = true;
         this._cancelIdle();
         this._cancelClear();
         this._cancelFade();
-        // Null callbacks first — in-flight async recognition callbacks check
-        // these before touching the (now-being-destroyed) launcher entry widget.
+        // Cancel in-flight work — the Soup request, the tesseract subprocess —
+        // so their callbacks fire promptly with an error instead of lingering.
+        try { this._cancellable?.cancel(); } catch (_e) {}
+        try { this._soup?.abort(); } catch (_e) {}
         this.onTextRecognised = null;
         this.onCanvasHidden   = null;
         this._soup = null;
@@ -354,9 +374,9 @@ export class HandwritingCanvas {
     }
 
     _onRecognised(text) {
-        if (!text) return;
+        if (this._destroyed || !text) return;
         this._clearStrokes();
-        this._borderBox.visible = false;
+        if (this._borderBox) this._borderBox.visible = false;
         if (this.onTextRecognised) this.onTextRecognised(text);
         this._clearId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, CLEAR_TIMEOUT_MS, () => {
             this._clearId = null;
@@ -403,7 +423,8 @@ export class HandwritingCanvas {
         const msg = Soup.Message.new('POST', url);
         msg.set_request_body_from_bytes('application/json',
             GLib.Bytes.new(new TextEncoder().encode(payload)));
-        this._soup.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, null, (session, result) => {
+        this._soup.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, this._cancellable, (session, result) => {
+            if (this._destroyed) return;
             try {
                 const bytes = session.send_and_read_finish(result);
                 const data  = JSON.parse(new TextDecoder().decode(bytes.get_data()));
@@ -487,7 +508,8 @@ export class HandwritingCanvas {
         reqHeaders.replace('hmac',           hmacHex);
         msg.set_request_body_from_bytes(null,
             GLib.Bytes.new(new TextEncoder().encode(payload)));
-        this._soup.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, null, (session, result) => {
+        this._soup.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, this._cancellable, (session, result) => {
+            if (this._destroyed) return;
             try {
                 const bytes = session.send_and_read_finish(result);
                 const data  = JSON.parse(new TextDecoder().decode(bytes.get_data()));
@@ -502,6 +524,7 @@ export class HandwritingCanvas {
 
     _recogniseTesseract() {
         if (!this._strokes.length) return;
+        let tmpPng = null;
         try {
             const w = Math.max(400, this._drawArea.get_width());
             const h = Math.max(80,  this._drawArea.get_height());
@@ -524,30 +547,44 @@ export class HandwritingCanvas {
                 cr.stroke();
             }
 
-            // Unique per-invocation filename so overlapping recognitions don't
-            // clobber each other's PNG before tesseract reads it.
-            const tmpPng = GLib.build_filenamev([
-                GLib.get_tmp_dir(),
-                `katip-hw-${GLib.get_monotonic_time()}.png`,
-            ]);
-            surface.writeToPNG(tmpPng);
+            // The rendered image is your handwriting, so it goes to a private
+            // 0700 directory under an unpredictable name rather than to a
+            // guessable path in the shared /tmp namespace. The random name also
+            // keeps overlapping recognitions from clobbering each other.
+            const pngPath = makeTmpPath('hw', '.png');
+            if (!pngPath) return;
+            tmpPng = pngPath; // so the catch below can clean up on a spawn failure
+            surface.writeToPNG(pngPath);
 
             const lang = this._getTesseractLang();
             const proc = new Gio.Subprocess({
-                argv:  ['tesseract', tmpPng, 'stdout', '-l', lang, '--psm', '7'],
+                argv:  ['tesseract', pngPath, 'stdout', '-l', lang, '--psm', '7'],
                 flags: Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE,
             });
-            proc.init(null);
-            proc.communicate_utf8_async(null, null, (_proc, res) => {
+            proc.init(this._cancellable);
+
+            // Nothing after this call can throw, so the catch below runs only
+            // when the callback will never fire — the two cleanup paths are
+            // mutually exclusive, and a double delete would be harmless anyway.
+            proc.communicate_utf8_async(null, this._cancellable, (_proc, res) => {
+                let text = '';
                 try {
                     const [, stdout] = _proc.communicate_utf8_finish(res);
-                    const text = (stdout || '').trim().replace(/\f/g, '');
-                    if (text) this._onRecognised(text);
-                    try { Gio.File.new_for_path(tmpPng).delete(null); } catch (_e) {}
-                } catch (e) { console.warn('[Katip] Tesseract failed:', e.message); }
+                    text = (stdout || '').trim().replace(/\f/g, '');
+                } catch (e) {
+                    console.warn('[Katip] Tesseract failed:', e.message);
+                } finally {
+                    // Delete on every path — success, recognition failure, and
+                    // cancellation — so handwriting images never pile up.
+                    deleteQuietly(pngPath);
+                }
+                if (text) this._onRecognised(text);
             });
         } catch (e) {
             console.warn('[Katip] Tesseract render failed:', e.message);
+            // Spawn failed (tesseract not installed, cancelled) after the PNG
+            // was written — clean it up rather than leaving it behind.
+            deleteQuietly(tmpPng);
         }
     }
 

@@ -173,7 +173,14 @@ Enable in Settings → Providers. Katip watches your clipboard in the background
 Type `clip` or `clipboard` to filter entries. Press Enter to copy an entry back to the clipboard.
 
 - **Delete** key — removes the selected entry permanently
-- **Ctrl+Enter** — toggles private mode. Private entries show `••••••••` instead of their content, protecting passwords and sensitive text. The entry still copies normally. Press Ctrl+Enter again to reveal.
+- **Ctrl+Enter** — toggles private mode. Private entries show `••••••••` instead of their content, so they are not readable over your shoulder or on a shared screen. The entry still copies normally. Press Ctrl+Enter again to reveal.
+
+> **Storage note:** history is written to `~/.local/share/katip-launcher/clipboard.json`
+> as **plain text**, in a directory and file readable only by your user account (0700/0600).
+> Private mode masks the on-screen display only — it does **not** encrypt the stored value,
+> and it does not protect against anything that can already read your home directory.
+> If you copy passwords, either leave this provider off (it is off by default) or delete
+> those entries with the Delete key afterwards.
 
 ### Process search *(optional, off by default)*
 Enable in Settings → Providers. Type `proc ` followed by a process name. Press Enter to send SIGTERM, Ctrl+Enter to open a terminal with process details.
@@ -185,11 +192,24 @@ Scribble back and forth horizontally to clear the canvas. Move the stylus away f
 
 Configure in Settings → General → Handwriting recognition: enable/disable, append vs replace mode, recognition language.
 
-> **Privacy note:** Handwriting recognition uses an unofficial Google Input Tools endpoint
-> (`inputtools.google.com`). Stroke data (vector coordinates, not images) is sent to
-> Google's servers for recognition. This is the same endpoint used by Google's own
-> handwriting demo page. There is no official API agreement or privacy guarantee.
-> If this is a concern, disable handwriting input in Settings → General.
+Three recognition backends are selectable in Settings → Handwriting:
+
+| Backend | Where recognition happens |
+|---|---|
+| **Tesseract** *(default)* | Fully offline. Requires the `tesseract` package. Nothing leaves your device. |
+| **Google Input Tools** | Stroke data sent to `inputtools.google.com`. |
+| **MyScript iink** | Stroke data sent to `cloud.myscript.com`. Requires your own API keys. |
+
+> **Privacy note:** the default backend is Tesseract, which runs locally — no network
+> traffic. The two online backends are opt-in. Google Input Tools uses an unofficial
+> endpoint (the one behind Google's own handwriting demo page): stroke data (vector
+> coordinates, not images) is sent to Google's servers with no API agreement or privacy
+> guarantee. MyScript requires API keys you supply yourself; those are stored unencrypted
+> in dconf, like all GSettings values.
+>
+> Tesseract renders your strokes to a temporary PNG. It is written to a private,
+> owner-only directory under `$XDG_RUNTIME_DIR` and deleted as soon as recognition
+> finishes.
 
 ---
 

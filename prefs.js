@@ -12,7 +12,35 @@ import Gdk from 'gi://Gdk';
 export default class KatipLauncherPrefs extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
+        // Keep the GSettings object alive for the window's lifetime. Without a
+        // strong reference held here, GJS can collect it while the handlers
+        // registered below are still live.
+        window._settings = settings;
         window.set_default_size(600, 700);
+
+        // Every handler below closes over GTK widgets that die with the window.
+        // Track them so they can be disconnected on close, instead of firing
+        // against destroyed widgets the next time a key changes.
+        const settingsIds = [];
+        const connectSetting = (signal, callback) =>
+            settingsIds.push(settings.connect(signal, callback));
+
+        const disconnectAll = () => {
+            for (const id of settingsIds) {
+                try { settings.disconnect(id); } catch (_e) {}
+            }
+            settingsIds.length = 0;
+        };
+        try {
+            window.connect('close-request', () => {
+                disconnectAll();
+                return false; // let the window close normally
+            });
+        } catch (_e) {
+            // Older/newer prefs hosts may hand us something without
+            // 'close-request' — fall back to teardown on destroy.
+            try { window.connect('destroy', disconnectAll); } catch (_e2) {}
+        }
 
         // ── Page: General ─────────────────────────────────────────────────
         const generalPage = new Adw.PreferencesPage({
@@ -91,14 +119,14 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
             const selected = map[themeCombo.get_selected()];
             if (selected) settings.set_string('color-theme', selected);
         });
-        settings.connect('changed::color-theme', () => {
+        connectSetting('changed::color-theme', () => {
             const map = buildThemeMap();
             const idx = map.indexOf(settings.get_string('color-theme'));
             if (idx >= 0 && themeCombo.get_selected() !== idx)
                 themeCombo.set_selected(idx);
         });
         // Rebuild when custom themes change so new ones appear immediately
-        settings.connect('changed::custom-themes', () => rebuildThemeCombo());
+        connectSetting('changed::custom-themes', () => rebuildThemeCombo());
 
         themeRow.add_suffix(themeCombo);
         appearGroup.add(themeRow);
@@ -197,7 +225,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
             dialog.present(window);
         });
 
-        settings.connect('changed::toggle-launcher', () => {
+        connectSetting('changed::toggle-launcher', () => {
             keybindLabel.set_accelerator(settings.get_strv('toggle-launcher')[0] ?? '');
         });
 
@@ -223,7 +251,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
         prefixCharRow.connect('apply', () => {
             settings.set_string('text-prefix-char', prefixCharRow.get_text());
         });
-        settings.connect('changed::text-prefix-char', () => {
+        connectSetting('changed::text-prefix-char', () => {
             const val = settings.get_string('text-prefix-char') ?? '/';
             if (prefixCharRow.get_text() !== val)
                 prefixCharRow.set_text(val);
@@ -263,7 +291,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
         const provToggles = [
             { key: 'enable-windows',    label: 'Open windows',      subtitle: 'Currently open application windows' },
             { key: 'enable-power',      label: 'Power actions',     subtitle: 'Lock, suspend, log out, restart, shut down · destructive actions ask to confirm' },
-            { key: 'enable-clipboard',  label: 'Clipboard history', subtitle: 'Recent clipboard entries · stored in plaintext · off by default' },
+            { key: 'enable-clipboard',  label: 'Clipboard history', subtitle: 'Recent clipboard entries · stored unencrypted in your home dir · private mode masks the display only · off by default' },
             { key: 'enable-apps',       label: 'Applications',      subtitle: 'Installed desktop applications' },
             { key: 'enable-files',      label: 'Files',             subtitle: 'Files found via GNOME Tracker' },
             { key: 'enable-process',    label: 'Process search',    subtitle: 'Running processes · trigger: proc <name> · off by default' },
@@ -375,7 +403,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
         };
 
         renderOrderList();
-        settings.connect('changed::provider-order', () => renderOrderList());
+        connectSetting('changed::provider-order', () => renderOrderList());
 
         // ── Recent first toggle ───────────────────────────────────────────────
         const recentRow = new Adw.SwitchRow({
@@ -422,7 +450,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
         window.add(filesPage);
 
         // Editable paths list — fully self-contained, builds its own groups
-        this._buildPathsEditor(filesPage, settings);
+        this._buildPathsEditor(filesPage, settings, connectSetting);
 
         // Scan settings for non-Tracker paths
         const scanGroup = new Adw.PreferencesGroup({
@@ -460,7 +488,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
         const engineLabelRow = new Adw.EntryRow({ title: 'Engine name', show_apply_button: true });
         engineLabelRow.set_text(settings.get_string('web-search-label') ?? '');
         engineLabelRow.connect('apply', () => settings.set_string('web-search-label', engineLabelRow.get_text()));
-        settings.connect('changed::web-search-label', () => {
+        connectSetting('changed::web-search-label', () => {
             const v = settings.get_string('web-search-label') ?? '';
             if (engineLabelRow.get_text() !== v) engineLabelRow.set_text(v);
         });
@@ -485,7 +513,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
             engineUrlRow.set_tooltip_text('Use {query} as the placeholder for the search term');
             settings.set_string('web-search-engine', url);
         });
-        settings.connect('changed::web-search-engine', () => {
+        connectSetting('changed::web-search-engine', () => {
             const v = settings.get_string('web-search-engine') ?? '';
             if (engineUrlRow.get_text() !== v) engineUrlRow.set_text(v);
         });
@@ -550,7 +578,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
         termRow.set_tooltip_text('Name or full path of the terminal app, e.g. ptyxis, kgx, gnome-terminal, alacritty');
         termRow.set_text(settings.get_string('terminal-app') ?? 'kgx');
         termRow.connect('apply', () => settings.set_string('terminal-app', termRow.get_text().trim() || 'kgx'));
-        settings.connect('changed::terminal-app', () => {
+        connectSetting('changed::terminal-app', () => {
             const v = settings.get_string('terminal-app') ?? 'kgx';
             if (termRow.get_text() !== v) termRow.set_text(v);
         });
@@ -563,7 +591,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
         });
         window.add(shortcutsPage);
 
-        this._buildShortcutsEditor(shortcutsPage, settings);
+        this._buildShortcutsEditor(shortcutsPage, settings, connectSetting);
 
         // ── Page: Custom Themes ───────────────────────────────────────────
         const themesPage = new Adw.PreferencesPage({
@@ -571,7 +599,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
             icon_name: 'preferences-desktop-theme-symbolic',
         });
         window.add(themesPage);
-        this._buildCustomThemesEditor(themesPage, settings);
+        this._buildCustomThemesEditor(themesPage, settings, connectSetting);
 
         // ── Page: Handwriting ─────────────────────────────────────────────
         const hwPage = new Adw.PreferencesPage({
@@ -619,7 +647,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
             settings.get_string('handwriting-language') ?? 'auto')));
         hwLangCombo.connect('notify::selected', () =>
             settings.set_string('handwriting-language', HW_LANG_MAP[hwLangCombo.get_selected()] ?? 'auto'));
-        settings.connect('changed::handwriting-language', () => {
+        connectSetting('changed::handwriting-language', () => {
             const idx = HW_LANG_MAP.indexOf(settings.get_string('handwriting-language') ?? 'auto');
             if (idx >= 0 && hwLangCombo.get_selected() !== idx) hwLangCombo.set_selected(idx);
         });
@@ -647,7 +675,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
             settings.get_string('handwriting-backend') ?? 'tesseract')));
         hwBackendCombo.connect('notify::selected', () =>
             settings.set_string('handwriting-backend', HW_BACKENDS[hwBackendCombo.get_selected()] ?? 'tesseract'));
-        settings.connect('changed::handwriting-backend', () => {
+        connectSetting('changed::handwriting-backend', () => {
             const idx = HW_BACKENDS.indexOf(settings.get_string('handwriting-backend') ?? 'tesseract');
             if (idx >= 0 && hwBackendCombo.get_selected() !== idx) hwBackendCombo.set_selected(idx);
         });
@@ -672,21 +700,23 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
         });
         hwPage.add(hwMyScriptGroup);
 
-        const hwAppKeyRow = new Adw.EntryRow({ title: 'Application key', show_apply_button: true });
+        // PasswordEntryRow, not EntryRow: these are API credentials and should
+        // not sit on screen in clear text while the prefs window is open.
+        const hwAppKeyRow = new Adw.PasswordEntryRow({ title: 'Application key', show_apply_button: true });
         hwAppKeyRow.set_text(settings.get_string('handwriting-myscript-app-key') ?? '');
         hwAppKeyRow.connect('apply', () =>
             settings.set_string('handwriting-myscript-app-key', hwAppKeyRow.get_text().trim()));
-        settings.connect('changed::handwriting-myscript-app-key', () => {
+        connectSetting('changed::handwriting-myscript-app-key', () => {
             const v = settings.get_string('handwriting-myscript-app-key') ?? '';
             if (hwAppKeyRow.get_text() !== v) hwAppKeyRow.set_text(v);
         });
         hwMyScriptGroup.add(hwAppKeyRow);
 
-        const hwHmacKeyRow = new Adw.EntryRow({ title: 'HMAC key', show_apply_button: true });
+        const hwHmacKeyRow = new Adw.PasswordEntryRow({ title: 'HMAC key', show_apply_button: true });
         hwHmacKeyRow.set_text(settings.get_string('handwriting-myscript-hmac-key') ?? '');
         hwHmacKeyRow.connect('apply', () =>
             settings.set_string('handwriting-myscript-hmac-key', hwHmacKeyRow.get_text().trim()));
-        settings.connect('changed::handwriting-myscript-hmac-key', () => {
+        connectSetting('changed::handwriting-myscript-hmac-key', () => {
             const v = settings.get_string('handwriting-myscript-hmac-key') ?? '';
             if (hwHmacKeyRow.get_text() !== v) hwHmacKeyRow.set_text(v);
         });
@@ -695,7 +725,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
 
     // ── Paths editor ──────────────────────────────────────────────────────
 
-    _buildPathsEditor(page, settings) {
+    _buildPathsEditor(page, settings, connectSetting) {
         // Header group — title and description only, no rows
         const headerGroup = new Adw.PreferencesGroup({
             title: 'Search paths',
@@ -749,7 +779,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
         renderPaths();
 
         // Single source of truth — re-render on any settings change
-        settings.connect('changed::file-search-paths', () => renderPaths());
+        connectSetting('changed::file-search-paths', () => renderPaths());
 
         // Add-path entry in its own group below the list
         const addGroup = new Adw.PreferencesGroup();
@@ -772,7 +802,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
     }
     // ── Shortcuts editor ──────────────────────────────────────────────────
 
-    _buildShortcutsEditor(page, settings) {
+    _buildShortcutsEditor(page, settings, connectSetting) {
         const headerGroup = new Adw.PreferencesGroup({
             title: 'Custom shortcuts',
             description: 'Standalone: type trigger alone (e.g. "gg"). Search: type trigger + space + term (e.g. "aa mugs").',
@@ -789,7 +819,12 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
         headerGroup.add(listBox);
 
         const loadShortcuts = () => {
-            try { return JSON.parse(settings.get_string('shortcuts')); }
+            try {
+                // A hand-edited dconf value can be any JSON — anything but an
+                // array would blow up in commitForm/renderList below.
+                const parsed = JSON.parse(settings.get_string('shortcuts'));
+                return Array.isArray(parsed) ? parsed : [];
+            }
             catch (_) { return []; }
         };
         const saveShortcuts = (arr) =>
@@ -979,7 +1014,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
         };
 
         renderList();
-        settings.connect('changed::shortcuts', () => renderList());
+        connectSetting('changed::shortcuts', () => renderList());
 
         // ── Reset to defaults button ──────────────────────────────────────
         const resetGroup = new Adw.PreferencesGroup();
@@ -1037,7 +1072,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
 
     // ── Custom themes editor ──────────────────────────────────────────────────
 
-    _buildCustomThemesEditor(page, settings) {
+    _buildCustomThemesEditor(page, settings, connectSetting) {
         const BASE_THEMES = ['dark', 'muted', 'light', 'soft', 'pastel']; // system not a valid base
 
         // Colour properties the user can override, with friendly labels
@@ -1056,7 +1091,10 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
         ];
 
         const loadThemes = () => {
-            try { return JSON.parse(settings.get_string('custom-themes')); }
+            try {
+                const parsed = JSON.parse(settings.get_string('custom-themes'));
+                return Array.isArray(parsed) ? parsed : [];
+            }
             catch (_) { return []; }
         };
         const saveThemes = arr =>
@@ -1130,7 +1168,7 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
         };
 
         renderList();
-        settings.connect('changed::custom-themes', () => renderList());
+        connectSetting('changed::custom-themes', () => renderList());
 
         // ── Editor form ───────────────────────────────────────────────────
         const formGroup = new Adw.PreferencesGroup({ title: 'Add custom theme' });
