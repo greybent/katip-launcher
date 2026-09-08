@@ -20,7 +20,10 @@ export class FilesProvider extends BaseProvider {
         this._connection = null;
         this._available  = false;
         this._ontology   = null;
-        this._initConnection();
+        // Keep the init promise so query() can await it — otherwise the first
+        // query after the launcher opens can run before the Tracker bus
+        // connection is ready and silently skip all indexed results.
+        this._initPromise = this._initConnection();
     }
 
     async _initConnection() {
@@ -33,13 +36,17 @@ export class FilesProvider extends BaseProvider {
             );
             this._available = true;
         } catch (e) {
-            console.warn('[Kapit] FilesProvider: Tracker unavailable —', e.message);
+            console.warn('[Katip] FilesProvider: Tracker unavailable —', e.message);
             this._available = false;
         }
     }
 
     async query(text) {
         if (!text || text.length < 2) return [];
+
+        // Wait for the Tracker connection attempt to finish before deciding
+        // whether indexed search is available (no-op once resolved).
+        if (this._initPromise) await this._initPromise;
 
         const homeDir = GLib.get_home_dir();
         const allPaths = this._settings.get_strv('file-search-paths')
@@ -85,7 +92,7 @@ export class FilesProvider extends BaseProvider {
         if (!this._ontology) {
             this._ontology = await this._detectOntology();
             if (!this._ontology) {
-                console.warn('[Kapit] FilesProvider: ontology detection failed');
+                console.warn('[Katip] FilesProvider: ontology detection failed');
                 return [];
             }
         }
@@ -133,7 +140,7 @@ export class FilesProvider extends BaseProvider {
             return results;
 
         } catch (e) {
-            console.warn('[Kapit] FilesProvider Tracker query failed:', e.message);
+            console.warn('[Katip] FilesProvider Tracker query failed:', e.message);
             this._ontology = null;
             return [];
         }

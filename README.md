@@ -1,6 +1,6 @@
 # Katip Launcher
 
-A fast, keyboard-driven launcher for GNOME Shell 45+ — search apps, files, windows and clipboard history, run commands, do math, set timers and more, all from a single shortcut.
+A fast, keyboard-driven launcher for GNOME Shell 45+ — search apps, files, windows and clipboard history, run commands, do math, set timers, control your session and more, all from a single shortcut.
 
 **Default shortcut:** `Ctrl+Space`
 
@@ -72,6 +72,11 @@ If the update includes a schema change (noted in the release), log out and back 
 ### Search and launch
 Type anything to search across all categories simultaneously. Results are ranked by how often you use them — the more you launch something, the higher it appears.
 
+### Application actions
+When you search for an app by name, its desktop actions appear right beneath it — for example **New Window** and **New Private Window** under a browser, or **New Document** under an editor. Press Enter on the action to run it directly.
+
+Toggle this in Settings → Providers → Applications → *Application actions*.
+
 ### Filter by category
 Click a filter chip at the top of the launcher, or type a keyword followed by a space:
 
@@ -118,6 +123,22 @@ Supported: length, mass, temperature, speed, volume, data, pressure.
 
 ### Web search
 A web search result appears automatically at the bottom of every search. Press Enter to open it in your browser. The search engine is configurable (DuckDuckGo by default). Type a domain like `github.com` to open it directly.
+
+### Power & session actions
+Type the name of a session action to control your machine:
+
+| Type this | Action |
+|---|---|
+| `lock` | Lock the screen |
+| `suspend` / `sleep` | Suspend |
+| `logout` | Log out of the GNOME session |
+| `restart` / `reboot` | Restart |
+| `shutdown` / `poweroff` | Power off |
+| `hibernate` | Hibernate |
+
+**Lock** and **suspend** run immediately. The destructive actions (log out, restart, shut down, hibernate) use a two-step confirm: the first Enter turns the row into *"press Enter again to confirm"*, and only the second Enter runs it — so a stray Enter can't end your session by accident. Press Escape to cancel.
+
+Toggle the whole category in Settings → Providers → *Power actions*.
 
 ### Custom shortcuts
 Create quick-launch triggers in Settings → Shortcuts. 18 are included by default:

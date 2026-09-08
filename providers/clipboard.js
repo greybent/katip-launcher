@@ -18,7 +18,7 @@ export class ClipboardProvider extends BaseProvider {
         try {
             this._clipboard = St.Clipboard.get_default();
         } catch (e) {
-            console.warn('[Kapit] ClipboardProvider: clipboard unavailable:', e.message);
+            console.warn('[Katip] ClipboardProvider: clipboard unavailable:', e.message);
         }
     }
 

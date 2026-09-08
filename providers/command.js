@@ -86,13 +86,12 @@ export class CommandProvider extends BaseProvider {
                 }
             }
 
-            // Check if binary exists in PATH
-            const inPath = GLib.find_program_in_path(bin);
-            if (!inPath) return true; // unknown binary — prefer terminal so error is visible
-
-            return true; // default: prefer terminal for unknown binaries
+            // Not a known GUI app — treat as a CLI tool and prefer a terminal,
+            // both so its output is visible and so errors from unknown binaries
+            // are not swallowed by a silent launch.
+            return true;
         } catch (e) {
-            console.warn('[Kapit] CommandProvider._likelyNeedsTerminal error:', e.message);
+            console.warn('[Katip] CommandProvider._likelyNeedsTerminal error:', e.message);
             return true; // safe default
         }
     }
@@ -104,7 +103,7 @@ export class CommandProvider extends BaseProvider {
             const proc = Gio.Subprocess.new(argv, Gio.SubprocessFlags.NONE);
             proc.wait_async(null, null); // don't block
         } catch (e) {
-            console.warn('[Kapit] CommandProvider silent launch failed:', e.message);
+            console.warn('[Katip] CommandProvider silent launch failed:', e.message);
             // Fallback to terminal
             const terminal = this._settings.get_string('terminal-app') || 'ptyxis';
             this._runInTerminal(cmd, terminal);
@@ -120,14 +119,16 @@ export class CommandProvider extends BaseProvider {
 
             let argv;
             if (keepOpen) {
-                // Keep terminal open after command exits by dropping into a shell
-                argv = [safeTerm, '-e', `bash -c '${cmd.replace(/'/g, "'\''")}; exec bash'`];
+                // Keep terminal open after command exits by dropping into a shell.
+                // Escape single quotes for the surrounding single-quoted string:
+                // each ' becomes '\'' (close-quote, escaped-quote, reopen-quote).
+                argv = [safeTerm, '-e', `bash -c '${cmd.replace(/'/g, "'\\''")}; exec bash'`];
             } else {
                 argv = [safeTerm, '-e', cmd];
             }
             Gio.Subprocess.new(argv, Gio.SubprocessFlags.NONE);
         } catch (e) {
-            console.warn('[Kapit] CommandProvider terminal launch failed:', e.message);
+            console.warn('[Katip] CommandProvider terminal launch failed:', e.message);
         }
     }
 }

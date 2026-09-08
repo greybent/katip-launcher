@@ -12,13 +12,13 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 /**
- * KapitIndicator — top-bar panel button with right-click menu.
+ * KatipIndicator — top-bar panel button with right-click menu.
  *
  * Left-click  → open launcher
  * Right-click → popup menu (Open launcher / Settings / Disable)
  */
-export const KapitIndicator = GObject.registerClass(
-    class KapitIndicator extends PanelMenu.Button {
+export const KatipIndicator = GObject.registerClass(
+    class KatipIndicator extends PanelMenu.Button {
 
         _init(onOpen, onPrefs) {
             super._init(0.0, 'Katip Launcher');
@@ -68,8 +68,10 @@ export const KapitIndicator = GObject.registerClass(
             const disableItem = new PopupMenu.PopupMenuItem('Disable Katip');
             disableItem.connect('activate', () => {
                 const { extensionManager } = Main;
-                const ext = extensionManager.lookup('katip-launcher@local');
-                if (ext) extensionManager.disableExtension(ext);
+                const uuid = 'katip-launcher@local';
+                // disableExtension() expects the uuid string, not the lookup object
+                if (extensionManager.lookup(uuid))
+                    extensionManager.disableExtension(uuid);
             });
             this.menu.addMenuItem(disableItem);
         }

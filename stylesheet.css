@@ -14,12 +14,12 @@
 
 /* ── Search bar ──────────────────────────────────────────────────────────── */
 
-.kapit-search-row {
+.katip-search-row {
     padding: 12px 14px;
     spacing: 6px;
 }
 
-.kapit-search-entry {
+.katip-search-entry {
     font-size: 16px;
     background-color: transparent;
     border: none;
@@ -27,19 +27,19 @@
     padding: 0;
 }
 
-.kapit-search-entry:focus {
+.katip-search-entry:focus {
     box-shadow: none;
     border: none;
 }
 
 /* ── Mode chips ──────────────────────────────────────────────────────────── */
 
-.kapit-chip-row {
+.katip-chip-row {
     padding: 6px 14px;
     spacing: 6px;
 }
 
-.kapit-chip {
+.katip-chip {
     border-radius: 20px;
     padding: 3px 10px;
     font-size: 12px;
@@ -47,55 +47,55 @@
 
 /* ── Results list ────────────────────────────────────────────────────────── */
 
-.kapit-results-box {
+.katip-results-box {
     padding: 4px 0;
     spacing: 0px;
 }
 
 /* ── Section headers ─────────────────────────────────────────────────────── */
 
-.kapit-section-header {
+.katip-section-header {
     padding: 6px 16px 2px;
     spacing: 8px;
 }
 
-.kapit-section-label {
+.katip-section-label {
     font-size: 11px;
 }
 
-.kapit-section-line {
+.katip-section-line {
     min-height: 1px;
 }
 
 /* ── Individual result row ───────────────────────────────────────────────── */
 
-.kapit-result-item {
+.katip-result-item {
     padding: 8px 14px;
     spacing: 0px;
     border-radius: 0px;
 }
 
-.kapit-result-icon {
+.katip-result-icon {
     min-width: 36px;
     min-height: 36px;
     border-radius: 8px;
     padding: 6px;
 }
 
-.kapit-result-title {
+.katip-result-title {
     font-size: 14px;
     font-weight: bold;
     padding: 0 8px;
 }
 
-.kapit-result-subtitle {
+.katip-result-subtitle {
     font-size: 12px;
     padding: 1px 8px 0;
 }
 
 /* ── Footer ──────────────────────────────────────────────────────────────── */
 
-.kapit-footer {
+.katip-footer {
     padding: 7px 14px;
     border-radius: 0 0 12px 12px;
     spacing: 0px;
@@ -103,7 +103,7 @@
 
 /* ── Keyboard hint pills ─────────────────────────────────────────────────── */
 
-.kapit-kbd-hint {
+.katip-kbd-hint {
     border-radius: 4px;
     padding: 1px 5px;
     font-size: 11px;
@@ -111,7 +111,7 @@
 
 /* ── Settings button ─────────────────────────────────────────────────────── */
 
-.kapit-settings-btn {
+.katip-settings-btn {
     border-radius: 6px;
     padding: 4px 5px;
     margin-left: 4px;

@@ -22,7 +22,7 @@
     </key>
     <key name="show-panel-indicator" type="b">
       <default>true</default>
-      <summary>Show Kapit icon in the top panel</summary>
+      <summary>Show Katip icon in the top panel</summary>
     </key>
 
     <key name="enable-windows" type="b">
@@ -40,6 +40,14 @@
     <key name="enable-apps" type="b">
       <default>true</default>
       <summary>Show installed applications in results</summary>
+    </key>
+    <key name="enable-app-actions" type="b">
+      <default>true</default>
+      <summary>Show application desktop actions (e.g. New Window) in results</summary>
+    </key>
+    <key name="enable-power" type="b">
+      <default>true</default>
+      <summary>Show power/session actions (lock, suspend, log out, restart, shut down)</summary>
     </key>
     <key name="enable-files" type="b">
       <default>true</default>
