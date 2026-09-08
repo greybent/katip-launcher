@@ -2,7 +2,8 @@
   "name": "Katip Launcher",
   "description": "A KRunner/Ulauncher-style application launcher for GNOME Shell",
   "uuid": "katip-launcher@local",
-  "version": 84,
+  "url": "https://github.com/greybent/katip-launcher",
+  "version": 85,
   "shell-version": [
     "45",
     "46",

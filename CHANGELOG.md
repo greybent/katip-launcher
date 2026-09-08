@@ -1,6 +1,14 @@
 # Changelog
 
-## v84 (current)
+## v85 (current)
+
+- **Feature:** About page in Settings — app icon, name and version, a Details group (version, extension UUID, supported GNOME Shell range, GTK/libadwaita versions, install location), Links (source, issue tracker, changelog, blog post), and Legal (copyright, credits, expandable MIT license text read from the shipped `LICENSE` file)
+- **Feature:** "Copy version info" button puts the full environment block on the clipboard for bug reports
+- **Fix:** the "Process search" toggle subtitle contained an unescaped `<name>`. Adw row subtitles are parsed as Pango markup, so GTK rejected the whole string with a markup parse error and the subtitle rendered empty. Now escaped as `&lt;name&gt;`
+- **Change:** `metadata.json` gained the standard `url` field, so the GNOME Extensions app links to the repository. The About page uses it as the base for its links
+- Version and all About-page details are read from `metadata.json` at runtime rather than hardcoded, so they cannot drift from the installed version
+
+## v84
 
 Code review pass — one load-blocking regression, four security hardening changes, and a set of correctness fixes.
 
