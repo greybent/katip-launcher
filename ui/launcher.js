@@ -21,11 +21,20 @@ const PROVIDER_LABELS = {
     shortcuts:  'Shortcuts',
     command:    'Shell',
     windows:    'Windows',
+    power:      'Power',
+    clipboard:  'Clipboard',
     apps:       'Applications',
     files:      'Files',
+    settings:   'Settings',
+    process:    'Processes',
     calculator: 'Calculator',
+    timer:      'Timer',
     web:        'Web',
 };
+
+// Providers that should not get a category chip (and are skipped by Tab cycling).
+// They are keyword-driven (e.g. power: "shutdown", "lock") so a chip adds nothing.
+const HIDDEN_CHIP_PROVIDERS = new Set(['power']);
 
 // Text-based provider prefixes.
 // Maps lowercase keyword → provider id.
@@ -166,7 +175,7 @@ function hexToRgb(hex) {
     return `${r},${g},${b}`;
 }
 
-// ── Theme definitions ────────────────────────────────────────────────────────
+// ── Theme definitions ────────────────────────────────────────────────────────────────────────
 // All colors applied as inline styles (St pseudo-class :hover doesn't work
 // with inline styles, so hover is handled via enter-event/leave-event signals).
 const THEMES = {
@@ -406,13 +415,13 @@ export const LauncherWidget = GObject.registerClass(
             });
         }
 
-        // ── Build ────────────────────────────────────────────────────────────
+        // ── Build ─────────────────────────────────────────────────────────────────────────
 
         _buildSearchBar() {
             const t = this._t;
 
             this._searchRow = new St.BoxLayout({
-                style_class: 'kapit-search-row',
+                style_class: 'katip-search-row',
                 style: t.searchRow,
                 x_expand: true,
             });
@@ -425,7 +434,7 @@ export const LauncherWidget = GObject.registerClass(
             }));
 
             this._entry = new St.Entry({
-                style_class: 'kapit-search-entry',
+                style_class: 'katip-search-entry',
                 style: t.searchEntry,
                 hint_text: 'Search apps, files, calculate…',
                 x_expand: true,
@@ -438,14 +447,14 @@ export const LauncherWidget = GObject.registerClass(
 
             this._escLabel = new St.Label({
                 text: 'Esc',
-                style_class: 'kapit-kbd-hint',
+                style_class: 'katip-kbd-hint',
                 style: t.kbd,
                 y_align: Clutter.ActorAlign.CENTER,
             });
             this._searchRow.add_child(this._escLabel);
 
             const settingsBtn = new St.Button({
-                style_class: 'kapit-settings-btn',
+                style_class: 'katip-settings-btn',
                 style: t.settingsBtn,
                 can_focus: false,
                 reactive: true,
@@ -476,7 +485,7 @@ export const LauncherWidget = GObject.registerClass(
         _buildModeChips() {
             const t = this._t;
 
-            // ── Handwriting canvas ────────────────────────────────────────
+            // ── Handwriting canvas ───────────────────────────────────────────────────
             this._hwCanvas = null;
             this._hwEnabled = false;
             try { this._hwEnabled = this._settings.get_boolean('handwriting-enabled'); } catch (_e) {}
@@ -500,9 +509,9 @@ export const LauncherWidget = GObject.registerClass(
                 // separate top-level chrome actor so it can float freely.
             }
 
-            // ── Category chips ─────────────────────────────────────────────
+            // ── Category chips ─────────────────────────────────────────────────────
             this._chipBox = new St.BoxLayout({
-                style_class: 'kapit-chip-row',
+                style_class: 'katip-chip-row',
                 style: t.chipRow,
                 x_expand: true,
             });
@@ -510,14 +519,16 @@ export const LauncherWidget = GObject.registerClass(
             this._chips = {};
             const modes = [
                 { id: 'all', label: 'All' },
-                ...this._providerManager.providers.map(p => ({ id: p.id, label: p.label })),
+                ...this._providerManager.providers
+                    .filter(p => !HIDDEN_CHIP_PROVIDERS.has(p.id))
+                    .map(p => ({ id: p.id, label: p.label })),
             ];
 
             for (const mode of modes) {
                 const isActive = mode.id === 'all';
                 const chip = new St.Button({
                     label: mode.label,
-                    style_class: 'kapit-chip',
+                    style_class: 'katip-chip',
                     style: isActive ? t.chipActive : t.chip,
                     reactive: true,
                     track_hover: true,
@@ -546,7 +557,7 @@ export const LauncherWidget = GObject.registerClass(
             this._resultsBox = new St.BoxLayout({
                 orientation: Clutter.Orientation.VERTICAL,
                 x_expand: true,
-                style_class: 'kapit-results-box',
+                style_class: 'katip-results-box',
             });
             this.add_child(this._resultsBox);
         }
@@ -555,7 +566,7 @@ export const LauncherWidget = GObject.registerClass(
             const t = this._t;
 
             this._footer = new St.BoxLayout({
-                style_class: 'kapit-footer',
+                style_class: 'katip-footer',
                 style: t.footer,
                 x_expand: true,
             });
@@ -566,7 +577,7 @@ export const LauncherWidget = GObject.registerClass(
                 const hint = new St.BoxLayout({ style: 'margin-right: 14px;' });
                 const keyLbl = new St.Label({
                     text: key,
-                    style_class: 'kapit-kbd-hint',
+                    style_class: 'katip-kbd-hint',
                     style: t.kbd,
                     y_align: Clutter.ActorAlign.CENTER,
                 });
@@ -585,7 +596,7 @@ export const LauncherWidget = GObject.registerClass(
             this._altHintBox = new St.BoxLayout({ style: 'margin-right: 14px;', visible: false });
             this._altHintBox.add_child(new St.Label({
                 text: 'Ctrl+↵',
-                style_class: 'kapit-kbd-hint',
+                style_class: 'katip-kbd-hint',
                 style: t.kbd,
                 y_align: Clutter.ActorAlign.CENTER,
             }));
@@ -623,7 +634,7 @@ export const LauncherWidget = GObject.registerClass(
             this.add_child(this._footer);
         }
 
-        // ── Mode ─────────────────────────────────────────────────────────────
+        // ── Mode ─────────────────────────────────────────────────────────────────────────
 
         _setMode(modeId) {
             const t = this._t;
@@ -654,7 +665,7 @@ export const LauncherWidget = GObject.registerClass(
             }
         }
 
-        // ── Query ─────────────────────────────────────────────────────────────
+        // ── Query ─────────────────────────────────────────────────────────────────────────
 
         _scheduleQuery() {
             if (this._debounceId) {
@@ -773,13 +784,13 @@ export const LauncherWidget = GObject.registerClass(
                             if (gen !== this._queryGen) return;
                             // Guard against widget being destroyed before async result arrives
                             if (!this.get_parent()) return;
-                            this._spliceResults(this._applyHistory(results, effectiveText), maxResults);
-                        }).catch(e => console.warn(`[Kapit] async ${provider.id}:`, e.message));
+                            this._spliceResults(results, maxResults, effectiveText);
+                        }).catch(e => console.warn(`[Katip] async ${provider.id}:`, e.message));
                     } else {
                         syncResults.push(...(Array.isArray(ret) ? ret : []));
                     }
                 } catch (e) {
-                    console.warn(`[Kapit] provider ${provider.id} threw:`, e.message);
+                    console.warn(`[Katip] provider ${provider.id} threw:`, e.message);
                 }
             }
 
@@ -806,25 +817,47 @@ export const LauncherWidget = GObject.registerClass(
                 });
             }
             return [...results].sort((a, b) => {
+                // Pinned results (e.g. a detected URL) always rank first,
+                // regardless of how often other results have been used.
+                if (!!a.forceTop !== !!b.forceTop) return a.forceTop ? -1 : 1;
                 const ha = this._history.getScore(a.id);
                 const hb = this._history.getScore(b.id);
                 return ((hb > 5 ? 1 : 0) - (ha > 5 ? 1 : 0)) || (hb - ha);
             });
         }
 
-        _spliceResults(newResults, maxResults) {
-            this._displayResults([...this._results, ...newResults].slice(0, maxResults));
+        _spliceResults(newResults, maxResults, text) {
+            // Merge late-arriving async results (e.g. Files via Tracker) with the
+            // already-displayed sync results, then re-sort the whole set by
+            // provider priority so they land in their correct position instead of
+            // always appearing last. _applyHistory then applies the history
+            // tie-break while preserving that priority order (stable sort).
+            const merged = [...this._results, ...newResults].sort(
+                (a, b) => (a._providerPriority ?? 99) - (b._providerPriority ?? 99)
+            );
+            this._displayResults(this._applyHistory(merged, text).slice(0, maxResults), true);
         }
 
-        // ── Display ───────────────────────────────────────────────────────────
+        // ── Display ───────────────────────────────────────────────────────────────────────
 
-        _displayResults(results) {
+        _displayResults(results, preserveActive = false) {
+            // When async results splice in, keep the user's current selection
+            // instead of snapping back to the top.
+            const prevActiveId = preserveActive
+                ? this._results[this._activeIndex]?.id
+                : null;
+
             for (const item of this._resultItems) item.destroy();
             this._resultItems = [];
             this._resultsBox.remove_all_children();
 
-            this._results     = results;
-            this._activeIndex = results.length > 0 ? 0 : -1;
+            this._results = results;
+            if (prevActiveId != null) {
+                const idx = results.findIndex(r => r.id === prevActiveId);
+                this._activeIndex = idx >= 0 ? idx : (results.length > 0 ? 0 : -1);
+            } else {
+                this._activeIndex = results.length > 0 ? 0 : -1;
+            }
 
             const t           = this._t;
             const showHeaders = this._settings.get_boolean('show-section-headers');
@@ -841,18 +874,18 @@ export const LauncherWidget = GObject.registerClass(
                     const label = (PROVIDER_LABELS[providerId] ?? providerId).toUpperCase();
 
                     const headerRow = new St.BoxLayout({
-                        style_class: 'kapit-section-header',
+                        style_class: 'katip-section-header',
                         x_expand: true,
                         y_align: Clutter.ActorAlign.CENTER,
                     });
                     headerRow.add_child(new St.Label({
                         text: label,
-                        style_class: 'kapit-section-label',
+                        style_class: 'katip-section-label',
                         style: t.sectionLabel,
                         y_align: Clutter.ActorAlign.CENTER,
                     }));
                     const line = new St.Widget({
-                        style_class: 'kapit-section-line',
+                        style_class: 'katip-section-line',
                         style: t.sectionLine,
                         x_expand: true,
                         y_align: Clutter.ActorAlign.CENTER,
@@ -862,8 +895,18 @@ export const LauncherWidget = GObject.registerClass(
                     lastPriority = priority;
                 }
 
-                const item = new ResultItem(result, i === 0, t);
+                const item = new ResultItem(result, i === this._activeIndex, t);
                 item.actor.connect('enter-event', () => {
+                    // Ignore the synthetic crossing event Clutter emits when a
+                    // freshly-rebuilt row lands under a motionless pointer — it
+                    // would override the default top-result selection without the
+                    // user actually moving the mouse. Honour hover only once the
+                    // pointer has genuinely moved from where it was at display time.
+                    const [px, py] = global.get_pointer();
+                    if (this._pointerOnDisplay &&
+                        px === this._pointerOnDisplay[0] &&
+                        py === this._pointerOnDisplay[1])
+                        return Clutter.EVENT_PROPAGATE;
                     this._setActiveIndex(i);
                     return Clutter.EVENT_PROPAGATE;
                 });
@@ -890,6 +933,10 @@ export const LauncherWidget = GObject.registerClass(
                         return Clutter.EVENT_STOP;
                     } else {
                         this._activateResult(result);
+                        if (result.activateKeepOpen) {
+                            this._runQuery(this._entry.get_text());
+                            return Clutter.EVENT_STOP;
+                        }
                     }
                     this._closeAfterActivation();
                     return Clutter.EVENT_STOP;
@@ -897,6 +944,11 @@ export const LauncherWidget = GObject.registerClass(
                 this._resultItems.push(item);
                 this._resultsBox.add_child(item.actor);
             }
+
+            // Snapshot the pointer position so the per-row enter handler can tell
+            // a real hover (pointer moved) from a synthetic crossing caused by
+            // rebuilding the list under a motionless pointer.
+            this._pointerOnDisplay = global.get_pointer();
 
             this._updateAltHint();
         }
@@ -938,7 +990,7 @@ export const LauncherWidget = GObject.registerClass(
             return this._entry?.get_text() ?? '';
         }
 
-        // ── Keyboard ──────────────────────────────────────────────────────────
+        // ── Keyboard ───────────────────────────────────────────────────────────────────────
 
         _onKeyPress(event) {
             const sym  = event.get_key_symbol();
@@ -999,6 +1051,12 @@ export const LauncherWidget = GObject.registerClass(
                         return Clutter.EVENT_STOP;
                     } else {
                         this._activateResult(result);
+                        if (result.activateKeepOpen) {
+                            // Keep the launcher open and re-render (e.g. a power
+                            // action arming its Enter-to-confirm step).
+                            this._runQuery(this._entry.get_text());
+                            return Clutter.EVENT_STOP;
+                        }
                     }
                     this._closeAfterActivation();
                 }
@@ -1012,7 +1070,9 @@ export const LauncherWidget = GObject.registerClass(
         }
 
         _cycleMode() {
-            const ids = ['all', ...this._providerManager.providers.map(p => p.id)];
+            const ids = ['all', ...this._providerManager.providers
+                .filter(p => !HIDDEN_CHIP_PROVIDERS.has(p.id))
+                .map(p => p.id)];
             const cur = ids.indexOf(this._activeMode);
             this._setMode(ids[(cur + 1) % ids.length]);
         }

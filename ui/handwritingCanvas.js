@@ -9,7 +9,7 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Soup from 'gi://Soup?version=3.0';
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────────────────────
 
 const STROKE_WIDTH     = 1.0;   // px — as thin as possible
 const EXTEND_PX        = 40;    // px to extend above and below the search entry
@@ -60,7 +60,7 @@ function isScribble(points) {
     return segs.reduce((n, d, i) => i > 0 && d !== segs[i - 1] ? n + 1 : n, 0) >= 3;
 }
 
-// ── HandwritingCanvas ─────────────────────────────────────────────────────────
+// ── HandwritingCanvas ───────────────────────────────────────────────────────────────────
 // Transparent overlay positioned over the search entry.
 // The widget is added to the launcher's top-level actor (not the search row)
 // and positioned to exactly cover the entry plus EXTEND_PX above and below.
@@ -110,7 +110,7 @@ export class HandwritingCanvas {
         });
     }
 
-    // ── Public API ────────────────────────────────────────────────────────────
+    // ── Public API ──────────────────────────────────────────────────────────────────
 
     // Call after adding widget to the launcher overlay actor.
     // entryActor: the St.Entry or its parent St.BoxLayout for positioning.
@@ -217,7 +217,7 @@ export class HandwritingCanvas {
         this._drawArea = null;
     }
 
-    // ── Stroke lifecycle ──────────────────────────────────────────────────────
+    // ── Stroke lifecycle ──────────────────────────────────────────────────────────────────
 
     _penDown(event) {
         this._cancelIdle();
@@ -284,7 +284,7 @@ export class HandwritingCanvas {
         return (ok && !isNaN(lx) && !isNaN(ly)) ? [lx, ly] : [sx, sy];
     }
 
-    // ── Cairo rendering ───────────────────────────────────────────────────────
+    // ── Cairo rendering ──────────────────────────────────────────────────────────────────
 
     _onRepaint(_area) {
         const cr = this._drawArea.get_context();
@@ -342,7 +342,7 @@ export class HandwritingCanvas {
         this._drawArea?.queue_repaint();
     }
 
-    // ── Recognition ───────────────────────────────────────────────────────────
+    // ── Recognition ─────────────────────────────────────────────────────────────────────
 
     _recognise() {
         if (!this._strokes.length) return;
@@ -383,7 +383,7 @@ export class HandwritingCanvas {
         return map[this._getLanguage()] || 'eng';
     }
 
-    // ── Google backend ────────────────────────────────────────────────────────
+    // ── Google backend ────────────────────────────────────────────────────────────────────
 
     _recogniseGoogle() {
         const lang = this._getLanguage();
@@ -415,9 +415,10 @@ export class HandwritingCanvas {
         });
     }
 
-    // ── MyScript backend ──────────────────────────────────────────────────────
-    // The hmac header must be HMAC-SHA512(body, appKey+hmacKey) in hex.
-    // GJS has no native HMAC so we compute it via openssl subprocess.
+    // ── MyScript backend ───────────────────────────────────────────────────────────────────
+    // The hmac header must be HMAC-SHA512(body, appKey+hmacKey) in hex,
+    // computed in-process via GLib so the secret key never reaches a
+    // subprocess argument list (and thus never /proc/<pid>/cmdline).
 
     _recogniseMyScript() {
         let appKey = '', hmacKey = '';
@@ -451,27 +452,26 @@ export class HandwritingCanvas {
             strokeGroups: [{ strokes }],
         });
 
-        // Compute HMAC-SHA512(payload, appKey+hmacKey) via openssl
+        // Compute HMAC-SHA512(payload, appKey+hmacKey) natively. Shelling out to
+        // `openssl dgst -hmac <key>` would expose the secret key in the process
+        // argument list, readable by any local process via /proc/<pid>/cmdline
+        // (including this extension's own "proc" search). GLib keeps it in-process.
         const userKey = appKey + hmacKey;
-        const proc = new Gio.Subprocess({
-            argv: ['openssl', 'dgst', '-sha512', '-hmac', userKey],
-            flags: Gio.SubprocessFlags.STDIN_PIPE |
-                   Gio.SubprocessFlags.STDOUT_PIPE |
-                   Gio.SubprocessFlags.STDERR_SILENCE,
-        });
-        proc.init(null);
-        proc.communicate_utf8_async(payload, null, (_proc, res) => {
-            try {
-                const [, stdout] = _proc.communicate_utf8_finish(res);
-                // openssl outputs: "HMAC-SHA512(stdin)= <hex>"
-                const hmacHex = (stdout || '').trim().split('=').pop().trim();
-                if (!hmacHex) {
-                    console.warn('[Katip] MyScript: HMAC computation failed');
-                    return;
-                }
-                this._sendMyScript(payload, appKey, hmacHex);
-            } catch (e) { console.warn('[Katip] MyScript HMAC failed:', e.message); }
-        });
+        let hmacHex;
+        try {
+            const keyBytes  = GLib.Bytes.new(new TextEncoder().encode(userKey));
+            const dataBytes = GLib.Bytes.new(new TextEncoder().encode(payload));
+            hmacHex = GLib.compute_hmac_for_bytes(
+                GLib.ChecksumType.SHA512, keyBytes, dataBytes);
+        } catch (e) {
+            console.warn('[Katip] MyScript HMAC failed:', e.message);
+            return;
+        }
+        if (!hmacHex) {
+            console.warn('[Katip] MyScript: HMAC computation failed');
+            return;
+        }
+        this._sendMyScript(payload, appKey, hmacHex);
     }
 
     _sendMyScript(payload, appKey, hmacHex) {
@@ -498,7 +498,7 @@ export class HandwritingCanvas {
         });
     }
 
-    // ── Tesseract backend ─────────────────────────────────────────────────────
+    // ── Tesseract backend ─────────────────────────────────────────────────────────────────────
 
     _recogniseTesseract() {
         if (!this._strokes.length) return;
@@ -524,7 +524,12 @@ export class HandwritingCanvas {
                 cr.stroke();
             }
 
-            const tmpPng = GLib.build_filenamev([GLib.get_tmp_dir(), 'katip-hw.png']);
+            // Unique per-invocation filename so overlapping recognitions don't
+            // clobber each other's PNG before tesseract reads it.
+            const tmpPng = GLib.build_filenamev([
+                GLib.get_tmp_dir(),
+                `katip-hw-${GLib.get_monotonic_time()}.png`,
+            ]);
             surface.writeToPNG(tmpPng);
 
             const lang = this._getTesseractLang();
@@ -546,7 +551,7 @@ export class HandwritingCanvas {
         }
     }
 
-    // ── Cleanup ───────────────────────────────────────────────────────────────
+    // ── Cleanup ────────────────────────────────────────────────────────────────────────
 
     _cancelIdle() {
         if (this._idleId) { GLib.source_remove(this._idleId); this._idleId = null; }
