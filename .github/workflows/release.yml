@@ -1,0 +1,138 @@
+name: Release
+
+# Manual release. Reads the version from metadata.json, verifies the tree,
+# builds the installable extension zip, pulls the notes out of CHANGELOG.md,
+# and publishes the tag + release.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to create. Defaults to v<version from metadata.json>.'
+        required: false
+        type: string
+      attach_zip:
+        description: 'Attach the installable extension zip to the release'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tag and version
+        id: v
+        run: |
+          set -euo pipefail
+          VERSION=$(python3 -c "import json;print(json.load(open('metadata.json'))['version'])")
+          TAG="${{ inputs.tag }}"
+          [ -n "$TAG" ] || TAG="v${VERSION}"
+          # A tag that disagrees with metadata.json would ship an extension
+          # that reports a different version than the release it came from.
+          if [ "$TAG" != "v${VERSION}" ]; then
+            echo "::error::tag $TAG does not match metadata.json version $VERSION"
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "::error::tag ${TAG} already exists"
+            exit 1
+          fi
+          echo "tag=${TAG}"         >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify every source file parses as an ES module
+        run: |
+          set -euo pipefail
+          # GJS loads extension files as ES modules. `node --check file.js`
+          # parses as a script and does NOT catch module-only syntax errors —
+          # that is how a duplicated method header shipped in v84 and stopped
+          # the extension loading at all. Copying to .mjs forces module parsing.
+          mkdir -p /tmp/esm
+          for f in $(git ls-files '*.js'); do
+            cp "$f" "/tmp/esm/$(echo "$f" | tr '/' '_')x.mjs"
+          done
+          fail=0
+          for f in /tmp/esm/*.mjs; do
+            node --check "$f" || { echo "::error::$f fails to parse as an ES module"; fail=1; }
+          done
+          exit $fail
+
+      - name: Verify the GSettings schema compiles
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libglib2.0-bin >/dev/null
+          glib-compile-schemas --strict --dry-run schemas/
+
+      - name: Build extension zip
+        id: zip
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.v.outputs.tag }}"
+          OUT="katip-launcher-${TAG}.zip"
+          STAGE="$(mktemp -d)/katip-launcher@local"
+          mkdir -p "$STAGE"
+          # Mirrors what install.sh puts in place, minus the scripts and docs
+          # that are not needed at runtime. LICENSE is required: the About page
+          # reads it from the install directory.
+          cp metadata.json *.js stylesheet.css LICENSE CHANGELOG.md "$STAGE/"
+          cp -r providers ui icons schemas "$STAGE/"
+          glib-compile-schemas "$STAGE/schemas/"
+          ( cd "$STAGE" && zip -qr "$GITHUB_WORKSPACE/$OUT" . -x '.*' )
+          unzip -l "$OUT" | grep -q ' metadata.json$' || {
+            echo "::error::metadata.json is not at the zip root"; exit 1; }
+          echo "path=${OUT}" >> "$GITHUB_OUTPUT"
+
+      - name: Build release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Cover every CHANGELOG section published since the last release, not
+          # just the top one — versions can be merged without being released
+          # (v84 and v85 both were), and those changes still ship here.
+          LAST=$(gh release view --json tagName -q .tagName 2>/dev/null || echo "")
+          echo "last released: ${LAST:-none}"
+          # Compare numerically rather than matching the heading exactly: the
+          # changelog does not necessarily carry a section for every released
+          # version (there is no "## v83", for instance), so an exact stop match
+          # would fall through and emit the entire file.
+          STOPNUM=-1
+          if [ -n "$LAST" ]; then STOPNUM="${LAST#v}"; fi
+          awk -v stopnum="$STOPNUM" '
+            /^## v/ {
+              ver = $2; sub(/^v/, "", ver)
+              if (started && (ver + 0) <= (stopnum + 0)) exit
+              started = 1
+            }
+            started { print }
+          ' CHANGELOG.md > notes.md
+          if [ -n "$LAST" ]; then
+            {
+              echo
+              echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${LAST}...${{ steps.v.outputs.tag }}"
+            } >> notes.md
+          fi
+          test -s notes.md || { echo "::error::release notes are empty"; exit 1; }
+          echo "--- notes ---"; cat notes.md
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.v.outputs.tag }}"
+          ARGS=(--target "$GITHUB_SHA" --title "$TAG" --notes-file notes.md)
+          if [ "${{ inputs.attach_zip }}" = "true" ]; then
+            ARGS+=("${{ steps.zip.outputs.path }}")
+          fi
+          gh release create "$TAG" "${ARGS[@]}"
+          echo "released: https://github.com/${{ github.repository }}/releases/tag/${TAG}"
