@@ -27,7 +27,7 @@
 
 ## v76
 
-- **Fix:** Typo "Kapit" → "Katip" in clipboard watcher console warning
+- **Fix:** Typo "Katip" → "Katip" in clipboard watcher console warning
 - **Fix:** Handwriting canvas `destroy()` now nulls `onTextRecognised` and `onCanvasHidden` callbacks before tearing down widgets — prevents in-flight async recognition callbacks from touching already-destroyed objects
 - **Fix:** `_borderBox` and `_drawArea` explicitly nulled in `destroy()`; separate `destroyBorderBox()` method removed (merged into `destroy()`)
 - **Fix:** `_drawArea.queue_repaint()` made null-safe (`_drawArea?.queue_repaint()`)

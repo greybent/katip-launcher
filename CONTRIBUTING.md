@@ -10,7 +10,7 @@ Open an issue and include:
 - What you expected to happen and what actually happened
 - Relevant output from the journal:
   ```bash
-  journalctl /usr/bin/gnome-shell --since "5 min ago" | grep -i kapit
+  journalctl /usr/bin/gnome-shell --since "5 min ago" | grep -i katip
   ```
 
 ## Development setup
