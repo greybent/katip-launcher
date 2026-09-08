@@ -268,6 +268,18 @@ Files outside your home directory are searched directly — add extra paths in S
 
 ---
 
+## About
+
+Settings → About shows the installed version, the extension UUID, the supported GNOME Shell
+range, your GTK/libadwaita versions and the install location, plus links to the source, the
+issue tracker and the changelog. **Copy version info** puts all of it on the clipboard in one
+click — please include that when filing a bug.
+
+The version shown is read from `metadata.json` at runtime, so it always reflects what is
+actually installed rather than what the docs happen to say.
+
+---
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

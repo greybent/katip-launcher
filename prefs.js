@@ -8,6 +8,7 @@ import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
 import Gio from 'gi://Gio';
 import Gdk from 'gi://Gdk';
+import GLib from 'gi://GLib';
 
 export default class KatipLauncherPrefs extends ExtensionPreferences {
     fillPreferencesWindow(window) {
@@ -30,6 +31,12 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
                 try { settings.disconnect(id); } catch (_e) {}
             }
             settingsIds.length = 0;
+            // Also drop the About page's pending "Copied" reset, so it cannot
+            // fire against a window that is going away.
+            if (this._copyResetId) {
+                try { GLib.source_remove(this._copyResetId); } catch (_e) {}
+                this._copyResetId = null;
+            }
         };
         try {
             window.connect('close-request', () => {
@@ -294,7 +301,10 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
             { key: 'enable-clipboard',  label: 'Clipboard history', subtitle: 'Recent clipboard entries · stored unencrypted in your home dir · private mode masks the display only · off by default' },
             { key: 'enable-apps',       label: 'Applications',      subtitle: 'Installed desktop applications' },
             { key: 'enable-files',      label: 'Files',             subtitle: 'Files found via GNOME Tracker' },
-            { key: 'enable-process',    label: 'Process search',    subtitle: 'Running processes · trigger: proc <name> · off by default' },
+            // Adw row subtitles are parsed as Pango markup, so the angle
+            // brackets must be escaped — unescaped, the whole subtitle failed
+            // to render and GTK logged a markup parse error.
+            { key: 'enable-process',    label: 'Process search',    subtitle: 'Running processes · trigger: proc &lt;name&gt; · off by default' },
             { key: 'enable-calculator', label: 'Calculator',        subtitle: 'Math expressions and unit conversions (e.g. 100km to miles)' },
             { key: 'enable-web',        label: 'Web search',        subtitle: 'Search the web via your configured engine' },
         ];
@@ -721,6 +731,242 @@ export default class KatipLauncherPrefs extends ExtensionPreferences {
             if (hwHmacKeyRow.get_text() !== v) hwHmacKeyRow.set_text(v);
         });
         hwMyScriptGroup.add(hwHmacKeyRow);
+
+        // ── Page: About ───────────────────────────────────────────────────
+        this._buildAboutPage(window);
+    }
+
+    // ── About page ────────────────────────────────────────────────────────
+
+    _buildAboutPage(window) {
+        const aboutPage = new Adw.PreferencesPage({
+            title: 'About',
+            icon_name: 'help-about-symbolic',
+        });
+        window.add(aboutPage);
+
+        // Everything here is read from metadata.json at runtime rather than
+        // hardcoded, so the version shown can never drift from the version
+        // actually installed and running.
+        const meta    = this.metadata ?? {};
+        const name    = meta.name ?? 'Katip Launcher';
+        const version = String(meta.version ?? '—');
+        const uuid    = meta.uuid ?? 'katip-launcher@local';
+
+        // ── Header: icon, name, version pill, description ──────────────────
+        const headerGroup = new Adw.PreferencesGroup();
+        aboutPage.add(headerGroup);
+
+        const headerBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 6,
+            halign: Gtk.Align.CENTER,
+            margin_top: 24,
+            margin_bottom: 12,
+        });
+
+        const iconPath = this.path
+            ? GLib.build_filenamev([this.path, 'icons', 'katip-launcher.svg'])
+            : null;
+        let logo;
+        if (iconPath && GLib.file_test(iconPath, GLib.FileTest.EXISTS)) {
+            // A GIcon (rather than new_from_file) so pixel_size is honoured and
+            // the SVG is rendered at the requested size instead of upscaled.
+            logo = new Gtk.Image({
+                gicon: Gio.FileIcon.new(Gio.File.new_for_path(iconPath)),
+                pixel_size: 96,
+            });
+        } else {
+            logo = new Gtk.Image({ icon_name: 'system-search-symbolic', pixel_size: 96 });
+        }
+        headerBox.append(logo);
+
+        headerBox.append(new Gtk.Label({
+            label: name,
+            css_classes: ['title-1'],
+            margin_top: 6,
+        }));
+
+        const versionLabel = new Gtk.Label({
+            label: `Version ${version}`,
+            css_classes: ['caption', 'dim-label'],
+        });
+        headerBox.append(versionLabel);
+
+        headerBox.append(new Gtk.Label({
+            label: meta.description ??
+                'A KRunner/Ulauncher-style application launcher for GNOME Shell',
+            wrap: true,
+            justify: Gtk.Justification.CENTER,
+            max_width_chars: 44,
+            margin_top: 6,
+            css_classes: ['dim-label'],
+        }));
+
+        headerGroup.add(headerBox);
+
+        // ── Details ────────────────────────────────────────────────────────
+        const detailsGroup = new Adw.PreferencesGroup({ title: 'Details' });
+        aboutPage.add(detailsGroup);
+
+        // Render the supported shell versions as a range when they are
+        // contiguous, which is the normal case, and as a plain list otherwise.
+        const shellVersions = Array.isArray(meta['shell-version'])
+            ? meta['shell-version'] : [];
+        const shellSupport = (() => {
+            if (!shellVersions.length) return 'unknown';
+            if (shellVersions.length === 1) return shellVersions[0];
+            const nums = shellVersions.map(v => parseInt(v, 10));
+            const contiguous = nums.every((n, i) =>
+                Number.isInteger(n) && (i === 0 || n === nums[i - 1] + 1));
+            return contiguous
+                ? `${shellVersions[0]} – ${shellVersions[shellVersions.length - 1]}`
+                : shellVersions.join(', ');
+        })();
+
+        const gtkVersion = `${Gtk.get_major_version()}.${Gtk.get_minor_version()}.${Gtk.get_micro_version()}`;
+        const advVersion = `${Adw.get_major_version()}.${Adw.get_minor_version()}.${Adw.get_micro_version()}`;
+        const installPath = this.path ?? 'unknown';
+
+        const detailRows = [
+            ['Version',              version],
+            ['Extension UUID',       uuid],
+            ['Supported GNOME Shell', shellSupport],
+            ['GTK / libadwaita',     `${gtkVersion} / ${advVersion}`],
+            ['Install location',     installPath],
+        ];
+
+        for (const [title, subtitle] of detailRows) {
+            const row = new Adw.ActionRow({ title, subtitle });
+            // Long values (the install path especially) need to be selectable
+            // so they can be copied into a bug report.
+            row.set_subtitle_selectable(true);
+            detailsGroup.add(row);
+        }
+
+        // One-click copy of everything a bug report needs.
+        const COPY_ROW_SUBTITLE = 'Copies the details above to the clipboard';
+        const copyRow = new Adw.ActionRow({
+            title: 'Copy version info',
+            subtitle: COPY_ROW_SUBTITLE,
+            activatable: true,
+        });
+        const copyIcon = new Gtk.Image({ icon_name: 'edit-copy-symbolic' });
+        copyRow.add_suffix(copyIcon);
+        copyRow.connect('activated', () => {
+            const info = [
+                `${name} ${version}`,
+                `UUID: ${uuid}`,
+                `Supported GNOME Shell: ${shellSupport}`,
+                `GTK / libadwaita: ${gtkVersion} / ${advVersion}`,
+                `Install location: ${installPath}`,
+            ].join('\n');
+            try {
+                const clipboard = Gdk.Display.get_default()?.get_clipboard();
+                if (!clipboard) throw new Error('clipboard unavailable');
+                clipboard.set(info);
+                copyRow.set_subtitle('Copied to clipboard');
+
+                // Reset the confirmation after a moment. Any pending reset is
+                // dropped first so repeated clicks cannot stack timers, and the
+                // callback bails if the window has since closed.
+                if (this._copyResetId) {
+                    GLib.source_remove(this._copyResetId);
+                    this._copyResetId = null;
+                }
+                this._copyResetId = GLib.timeout_add_seconds(
+                    GLib.PRIORITY_DEFAULT, 3, () => {
+                        this._copyResetId = null;
+                        if (copyRow.get_root())
+                            copyRow.set_subtitle(COPY_ROW_SUBTITLE);
+                        return GLib.SOURCE_REMOVE;
+                    });
+            } catch (e) {
+                copyRow.set_subtitle(`Copy failed: ${e.message}`);
+            }
+        });
+        detailsGroup.add(copyRow);
+
+        // ── Links ──────────────────────────────────────────────────────────
+        const linksGroup = new Adw.PreferencesGroup({ title: 'Links' });
+        aboutPage.add(linksGroup);
+
+        const HOME = meta.url ?? 'https://github.com/greybent/katip-launcher';
+        const links = [
+            ['Source code',     HOME,                              'Browse the repository on GitHub'],
+            ['Report an issue', `${HOME}/issues`,                  'Bugs and feature requests'],
+            ['Changelog',       `${HOME}/blob/main/CHANGELOG.md`,  'What changed in each version'],
+            ['Blog post',       'https://random-it-blog.de/fedora/katip-launcher-a-krunner-like-launcher-for-gnome-3-v40-vibe-coding-claude-ai/', 'Background and screenshots'],
+        ];
+
+        for (const [title, uri, subtitle] of links) {
+            const row = new Adw.ActionRow({ title, subtitle, activatable: true });
+            // go-next-symbolic rather than an external-link glyph: it is in the
+            // base Adwaita icon theme on every supported release, and it is what
+            // the quick-preset rows on the Web page already use.
+            row.add_suffix(new Gtk.Image({ icon_name: 'go-next-symbolic' }));
+            row.connect('activated', () => {
+                // Same launch path the providers use, so link handling behaves
+                // identically in prefs and in the launcher itself.
+                try { Gio.AppInfo.launch_default_for_uri(uri, null); }
+                catch (e) { console.warn('[Katip] About: cannot open', uri, e.message); }
+            });
+            linksGroup.add(row);
+        }
+
+        // ── Legal ──────────────────────────────────────────────────────────
+        const legalGroup = new Adw.PreferencesGroup({ title: 'Legal' });
+        aboutPage.add(legalGroup);
+
+        legalGroup.add(new Adw.ActionRow({
+            title: 'Copyright',
+            subtitle: '© 2025 Grey',
+        }));
+
+        legalGroup.add(new Adw.ActionRow({
+            title: 'Credits',
+            subtitle: 'Developed with Claude (Anthropic)',
+        }));
+
+        const licenseRow = new Adw.ExpanderRow({
+            title: 'License',
+            subtitle: 'MIT License',
+        });
+        const licenseText = new Gtk.Label({
+            label: this._readLicense(),
+            wrap: true,
+            xalign: 0,
+            selectable: true,
+            margin_top: 12,
+            margin_bottom: 12,
+            margin_start: 12,
+            margin_end: 12,
+            css_classes: ['caption', 'dim-label'],
+        });
+        // A plain ListBoxRow, not an ActionRow — setting a child on an ActionRow
+        // would replace the internal layout it builds for title/subtitle.
+        const licenseRowChild = new Gtk.ListBoxRow({
+            activatable: false,
+            selectable:  false,
+            child:       licenseText,
+        });
+        licenseRow.add_row(licenseRowChild);
+        legalGroup.add(licenseRow);
+    }
+
+    // Read the shipped LICENSE file so the displayed text cannot drift from the
+    // one actually distributed. Falls back to the standard MIT summary line.
+    _readLicense() {
+        try {
+            if (this.path) {
+                const [ok, bytes] = GLib.file_get_contents(
+                    GLib.build_filenamev([this.path, 'LICENSE']));
+                if (ok && bytes?.length)
+                    return new TextDecoder().decode(bytes).trim();
+            }
+        } catch (_e) {}
+        return 'Released under the MIT License. See the LICENSE file in the ' +
+               'extension directory for the full text.';
     }
 
     // ── Paths editor ──────────────────────────────────────────────────────
