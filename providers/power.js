@@ -67,7 +67,11 @@ const ACTIONS = [
 export class PowerProvider extends BaseProvider {
     get id()       { return 'power'; }
     get label()    { return 'Power'; }
-    get priority() { return 18; } // just before apps (20)
+    // Deliberately below apps (20): with query text present, results are ranked
+    // by history score and ties fall back to provider order, so a provider above
+    // apps would put "Lock screen" under the cursor for any query that merely
+    // starts like one of its keywords. An app match is the safer default.
+    get priority() { return 25; }
 
     constructor(settings) {
         super(settings);
@@ -88,7 +92,12 @@ export class PowerProvider extends BaseProvider {
             this._armed = null;
         }
 
-        if (needle.length < 2) return [];
+        // Four characters minimum. Two was enough for "lo" to surface "Lock
+        // screen" and "su" to surface "Suspend" — neither is destructive, so
+        // neither asks to confirm, and a stray Enter while typing an app name
+        // would end the session. Every keyword here is at least four letters,
+        // so this costs nothing in reach.
+        if (needle.length < 4) return [];
 
         return ACTIONS
             .filter(a => this._matches(a, needle))

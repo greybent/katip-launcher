@@ -685,17 +685,21 @@ export const LauncherWidget = GObject.registerClass(
         _parseTextPrefix(text) {
             if (!text) return null;
 
-            // Read prefix char — default '/' if key missing (schema not compiled yet)
+            // Read prefix char — default '/' if key missing (schema not compiled yet).
+            // An empty string is a valid setting meaning "bare keywords only",
+            // so only a missing key falls back to the default.
             let prefixChar = '/';
             try {
                 const val = this._settings.get_string('text-prefix-char');
-                if (val) prefixChar = val;
+                if (val !== null && val !== undefined) prefixChar = val;
             } catch (_e) { /* key not in schema yet — use default */ }
 
             try {
 
-            // Try slash-prefixed form first: "/keyword rest"
-            if (text.startsWith(prefixChar)) {
+            // Try slash-prefixed form first: "/keyword rest".
+            // Skipped when the prefix char is empty — every string starts with
+            // '', which would swallow the bare-keyword form below.
+            if (prefixChar && text.startsWith(prefixChar)) {
                 const rest = text.slice(prefixChar.length);
                 const spaceIdx = rest.indexOf(' ');
                 const keyword = (spaceIdx === -1 ? rest : rest.slice(0, spaceIdx)).toLowerCase();
@@ -839,13 +843,6 @@ export const LauncherWidget = GObject.registerClass(
         }
 
         // ── Display ───────────────────────────────────────────────────────────────────────
-
-        _displayResults(results, preserveActive = false) {
-            // When async results splice in, keep the user's current selection
-            // instead of snapping back to the top.
-            const prevActiveId = preserveActive
-                ? this._results[this._activeIndex]?.id
-                : null;
 
         _displayResults(results, preserveActive = false) {
             // When async results splice in, keep the user's current selection

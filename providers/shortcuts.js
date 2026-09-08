@@ -42,7 +42,7 @@ export class ShortcutsProvider extends BaseProvider {
                 if (trimmed.toLowerCase().startsWith(prefix)) {
                     const term = trimmed.slice(prefix.length).trim();
                     if (!term) continue;
-                    const url = (sc.url ?? '').replace('{query}', encodeURIComponent(term));
+                    const url = (sc.url ?? '').replaceAll('{query}', encodeURIComponent(term));
                     results.push({
                         id:         `shortcut:${trigger}:${term}`,
                         title:      `${sc.label ?? trigger}: ${term}`,

@@ -16,18 +16,22 @@ import { CalculatorProvider }  from './providers/calculator.js';
 import { TimerProvider }       from './providers/timer.js';
 import { WebProvider }         from './providers/web.js';
 
+// alwaysOn providers have no toggle and therefore no settings key. They used to
+// name keys ('enable-shortcuts', 'enable-command', 'enable-settings',
+// 'enable-timer') that do not exist in the gschema — harmless only because the
+// key is never read for them, but misleading to anyone adding a toggle later.
 const REGISTRY = [
-    { key: 'enable-shortcuts',  Cls: ShortcutsProvider,  alwaysOn: true },
-    { key: 'enable-command',    Cls: CommandProvider,     alwaysOn: true },
+    { key: null,                Cls: ShortcutsProvider,   alwaysOn: true },
+    { key: null,                Cls: CommandProvider,     alwaysOn: true },
     { key: 'enable-windows',    Cls: WindowsProvider },
     { key: 'enable-power',      Cls: PowerProvider },
     { key: 'enable-clipboard',  Cls: ClipboardProvider },
     { key: 'enable-apps',       Cls: AppsProvider },
     { key: 'enable-files',      Cls: FilesProvider },
-    { key: 'enable-settings',   Cls: SettingsProvider,    alwaysOn: true },
+    { key: null,                Cls: SettingsProvider,    alwaysOn: true },
     { key: 'enable-process',    Cls: ProcessProvider },
     { key: 'enable-calculator', Cls: CalculatorProvider },
-    { key: 'enable-timer',      Cls: TimerProvider,       alwaysOn: true },
+    { key: null,                Cls: TimerProvider,       alwaysOn: true },
     { key: 'enable-web',        Cls: WebProvider },
 ];
 
@@ -41,7 +45,7 @@ export class ProviderManager {
 
     _load() {
         for (const { key, Cls, alwaysOn } of REGISTRY) {
-            // alwaysOn providers (shortcuts) don't have a settings toggle
+            // alwaysOn providers (shortcuts, shell, settings, timer) have no toggle
             if (!alwaysOn && !this._settings.get_boolean(key)) continue;
             try {
                 const provider = Cls === ClipboardProvider

@@ -141,10 +141,19 @@ export default class KatipLauncher extends Extension {
     // ── Panel indicator ───────────────────────────────────────────────────────
 
     _seedDefaultShortcuts() {
-        const current = this._settings.get_string('shortcuts');
-        let parsed = [];
-        try { parsed = JSON.parse(current); } catch (_) {}
-        if (Array.isArray(parsed) && parsed.length > 0) return;
+        // The gschema default is a non-empty 4-entry array, so testing the
+        // effective value alone always bailed out and this list never shipped.
+        // Seed when the key has never been written by the user, and also when
+        // they have explicitly emptied it back out to nothing.
+        let hasUserValue = false;
+        try { hasUserValue = this._settings.get_user_value('shortcuts') !== null; }
+        catch (_e) { hasUserValue = true; } // unknown — leave the user's data alone
+
+        if (hasUserValue) {
+            let parsed = [];
+            try { parsed = JSON.parse(this._settings.get_string('shortcuts')); } catch (_) {}
+            if (Array.isArray(parsed) && parsed.length > 0) return;
+        }
 
         const defaults = [
             // Search engines
@@ -185,7 +194,8 @@ export default class KatipLauncher extends Extension {
     _addIndicator() {
         this._indicator = new KatipIndicator(
             () => this._open(),
-            () => this._openPrefs()
+            () => this._openPrefs(),
+            this.path
         );
         Main.panel.addToStatusArea('katip-launcher', this._indicator);
     }

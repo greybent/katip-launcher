@@ -1,6 +1,39 @@
 # Changelog
 
-## v80 (current)
+## v84 (current)
+
+Code review pass — one load-blocking regression, four security hardening changes, and a set of correctness fixes.
+
+**Critical**
+
+- **Fix:** `ui/launcher.js` contained a duplicated `_displayResults` method header left behind by a bad merge conflict resolution. GJS loads the file as an ES module, where that is a hard `SyntaxError`, so `extension.js` could not import `LauncherWidget` and the extension failed to enable at all. (Note: `node --check file.js` does not catch this; it only appears when the file is parsed as a module.)
+- **Fix:** restored the executable bit on `install.sh`, dropped by the same merge
+
+**Security**
+
+- **Fix:** new `secureTmp.js` — scratch files now live in a 0700 directory under `$XDG_RUNTIME_DIR` with random UUID names, replacing predictable world-readable paths in the shared `/tmp` namespace. Covers `ProcessProvider._showDetails` (`/tmp/katip-proc-<pid>.txt`, which was also never deleted) and the Tesseract handwriting PNG (`/tmp/katip-hw-<monotonic>.png`)
+- **Fix:** handwriting PNG is now deleted on every exit path — success, recognition failure, and cancellation — instead of only when recognition returned text
+- **Fix:** `clipboard.json` and `history.json` are written with `Gio.FileCreateFlags.PRIVATE` and their directory created 0700. Previously the file existed at the umask default (usually 0644) for the window between `replace_contents` and the follow-up `chmod`, on every single save
+- **Fix:** MyScript API keys use `Adw.PasswordEntryRow` instead of a plain `Adw.EntryRow`, so credentials are not displayed in clear text
+- **Docs:** clipboard "private mode" is now described accurately in both the README and the provider subtitle — it masks the on-screen display, it does not encrypt the stored value. The previous wording claimed it protected passwords
+
+**Fixes**
+
+- **Fix:** `HandwritingCanvas` use-after-destroy — `destroy()` now cancels the in-flight Soup request and Tesseract subprocess via a `Gio.Cancellable` and sets a `_destroyed` flag that every async callback checks. A recognition response landing after the launcher closed previously dereferenced a nulled `_borderBox` and registered an uncancellable timeout against freed actors
+- **Fix:** power actions no longer trigger on 2-character prefixes. Typing `lo` surfaced "Lock screen" and `su` surfaced "Suspend" — neither is destructive, so neither asks to confirm, and a stray Enter ended the session. Minimum is now 4 characters (every keyword is at least that long), and the provider's priority moved from 18 to 25 so app matches rank above it
+- **Fix:** `_seedDefaultShortcuts` was dead code — it bailed whenever the effective value was non-empty, but the gschema default already ships 4 entries, so the 18-entry default list never applied. Now keyed on `get_user_value()` being unset
+- **Fix:** `ProcessProvider` no longer calls `GLib.spawn_command_line_sync` on the compositor thread — every `proc ` keystroke froze the entire desktop for the duration of `ps`. Now async via `communicate_utf8_async`, as is the details view
+- **Fix:** `ProcessProvider` parses `ps -eo pid=,args=` (two fields, args last) instead of `pid,comm,args` split on whitespace, which mangled every process whose name contains a space
+- **Fix:** filesystem scan checks its 500 ms deadline per directory entry, not just per directory — a single directory with thousands of files previously ran to completion regardless
+- **Fix:** panel indicator resolves its icon from the real extension path instead of a hardcoded `~/.local/share/...`, so a system-wide install no longer silently falls back to the generic search icon
+- **Fix:** prefs disconnects its ~16 GSettings handlers when the window closes and holds a strong reference to the settings object, per GJS guidance
+- **Fix:** empty `text-prefix-char` now means "bare keywords only" as its tooltip promises, instead of falling back to `/`
+- **Fix:** shortcut URLs use `replaceAll('{query}', …)`, matching `WebProvider`; a template with two placeholders only had the first substituted
+- **Fix:** `loadShortcuts`/`loadThemes` in prefs guard with `Array.isArray`, matching the launcher-side loader — a hand-edited non-array dconf value no longer throws
+- **Fix:** `providerManager` REGISTRY no longer names four gschema keys that do not exist (`enable-shortcuts`, `enable-command`, `enable-settings`, `enable-timer`); those providers are `alwaysOn` and their key is now explicitly `null`
+- **Docs:** handwriting privacy note updated — the default backend is Tesseract (offline), not Google Input Tools
+
+## v80
 
 - **Feature:** Calculator chaining — pressing Enter on a calculator result fills the search entry with the result instead of closing the launcher, enabling chained calculations (e.g. `5+5` → Enter → `10` → type `+3` → `13`)
 - **Feature:** Calculator Ctrl+C copies the result to clipboard; Ctrl+↵ also copies

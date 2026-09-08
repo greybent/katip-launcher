@@ -127,19 +127,20 @@ export class HistoryManager {
         try {
             this._prune();
 
-            const dir = Gio.File.new_for_path(this._dataDir);
-            if (!dir.query_exists(null))
-                dir.make_directory_with_parents(null);
+            GLib.mkdir_with_parents(this._dataDir, 0o700);
 
             const file = Gio.File.new_for_path(this._filePath);
             const json = JSON.stringify(this._data, null, 2);
+            // History records reveal usage patterns — PRIVATE creates the file
+            // owner-only rather than leaving it umask-readable until the chmod
+            // below lands.
             file.replace_contents(
                 new TextEncoder().encode(json),
                 null, false,
-                Gio.FileCreateFlags.REPLACE_DESTINATION,
+                Gio.FileCreateFlags.REPLACE_DESTINATION | Gio.FileCreateFlags.PRIVATE,
                 null
             );
-            // History records reveal usage patterns — keep it owner-only.
+            // Belt and braces: fixes the mode on files written by earlier versions.
             try {
                 file.set_attribute_uint32('unix::mode', 0o600,
                     Gio.FileQueryInfoFlags.NONE, null);
