@@ -415,7 +415,7 @@ export class HandwritingCanvas {
         });
     }
 
-    // ── MyScript backend ───────────────────────────────────────────────────────────────────
+    // ── MyScript backend ──────────────────────────────────────────────────────
     // The hmac header must be HMAC-SHA512(body, appKey+hmacKey) in hex,
     // computed in-process via GLib so the secret key never reaches a
     // subprocess argument list (and thus never /proc/<pid>/cmdline).

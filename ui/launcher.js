@@ -847,6 +847,13 @@ export const LauncherWidget = GObject.registerClass(
                 ? this._results[this._activeIndex]?.id
                 : null;
 
+        _displayResults(results, preserveActive = false) {
+            // When async results splice in, keep the user's current selection
+            // instead of snapping back to the top.
+            const prevActiveId = preserveActive
+                ? this._results[this._activeIndex]?.id
+                : null;
+
             for (const item of this._resultItems) item.destroy();
             this._resultItems = [];
             this._resultsBox.remove_all_children();
