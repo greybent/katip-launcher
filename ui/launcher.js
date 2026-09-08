@@ -175,7 +175,7 @@ function hexToRgb(hex) {
     return `${r},${g},${b}`;
 }
 
-// ── Theme definitions ────────────────────────────────────────────────────────
+// ── Theme definitions ────────────────────────────────────────────────────────────────────────
 // All colors applied as inline styles (St pseudo-class :hover doesn't work
 // with inline styles, so hover is handled via enter-event/leave-event signals).
 const THEMES = {
@@ -415,7 +415,7 @@ export const LauncherWidget = GObject.registerClass(
             });
         }
 
-        // ── Build ────────────────────────────────────────────────────────────
+        // ── Build ─────────────────────────────────────────────────────────────────────────
 
         _buildSearchBar() {
             const t = this._t;
@@ -485,7 +485,7 @@ export const LauncherWidget = GObject.registerClass(
         _buildModeChips() {
             const t = this._t;
 
-            // ── Handwriting canvas ────────────────────────────────────────
+            // ── Handwriting canvas ───────────────────────────────────────────────────
             this._hwCanvas = null;
             this._hwEnabled = false;
             try { this._hwEnabled = this._settings.get_boolean('handwriting-enabled'); } catch (_e) {}
@@ -509,7 +509,7 @@ export const LauncherWidget = GObject.registerClass(
                 // separate top-level chrome actor so it can float freely.
             }
 
-            // ── Category chips ─────────────────────────────────────────────
+            // ── Category chips ─────────────────────────────────────────────────────
             this._chipBox = new St.BoxLayout({
                 style_class: 'katip-chip-row',
                 style: t.chipRow,
@@ -634,7 +634,7 @@ export const LauncherWidget = GObject.registerClass(
             this.add_child(this._footer);
         }
 
-        // ── Mode ─────────────────────────────────────────────────────────────
+        // ── Mode ─────────────────────────────────────────────────────────────────────────
 
         _setMode(modeId) {
             const t = this._t;
@@ -665,7 +665,7 @@ export const LauncherWidget = GObject.registerClass(
             }
         }
 
-        // ── Query ─────────────────────────────────────────────────────────────
+        // ── Query ─────────────────────────────────────────────────────────────────────────
 
         _scheduleQuery() {
             if (this._debounceId) {
@@ -838,7 +838,14 @@ export const LauncherWidget = GObject.registerClass(
             this._displayResults(this._applyHistory(merged, text).slice(0, maxResults), true);
         }
 
-        // ── Display ───────────────────────────────────────────────────────────
+        // ── Display ───────────────────────────────────────────────────────────────────────
+
+        _displayResults(results, preserveActive = false) {
+            // When async results splice in, keep the user's current selection
+            // instead of snapping back to the top.
+            const prevActiveId = preserveActive
+                ? this._results[this._activeIndex]?.id
+                : null;
 
         _displayResults(results, preserveActive = false) {
             // When async results splice in, keep the user's current selection
@@ -990,7 +997,7 @@ export const LauncherWidget = GObject.registerClass(
             return this._entry?.get_text() ?? '';
         }
 
-        // ── Keyboard ──────────────────────────────────────────────────────────
+        // ── Keyboard ───────────────────────────────────────────────────────────────────────
 
         _onKeyPress(event) {
             const sym  = event.get_key_symbol();
