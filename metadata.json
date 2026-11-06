@@ -3,14 +3,15 @@
   "description": "A KRunner/Ulauncher-style application launcher for GNOME Shell",
   "uuid": "katip-launcher@local",
   "url": "https://github.com/greybent/katip-launcher",
-  "version": 86,
+  "version": 87,
   "shell-version": [
     "45",
     "46",
     "47",
     "48",
     "49",
-    "50"
+    "50",
+    "51"
   ],
   "settings-schema": "org.gnome.shell.extensions.katip-launcher"
 }

@@ -1,6 +1,10 @@
 # Changelog
 
-## v86 (current)
+## v87 (current)
+
+- **Fix:** declare GNOME Shell 51 support. `metadata.json` listed 45–50, so Shell 51 (Fedora 45) treated the extension as incompatible and refused to load it. The GNOME 51 extension porting guide lists no breaking changes affecting this code
+
+## v86
 
 Fixes trigger keywords being outranked by the web search result.
 
