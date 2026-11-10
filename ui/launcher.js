@@ -451,6 +451,12 @@ export const LauncherWidget = GObject.registerClass(
             });
             this._entry.clutter_text.connect('text-changed', () => this._scheduleQuery());
             this._entry.clutter_text.connect('key-press-event', (_a, ev) => this._onKeyPress(ev));
+            // GNOME Shell 51 routes Return through Clutter controllers, so the
+            // 'key-press-event' handler above no longer sees Enter (other keys
+            // still arrive). The 'activate' signal is the portable way to catch
+            // Enter across Shell 45–51. _onEntryActivate guards against the
+            // older-shell case where key-press already handled it.
+            this._entry.clutter_text.connect('activate', () => this._onEntryActivate());
 
             this._searchRow.add_child(this._entry);
 
@@ -1006,6 +1012,56 @@ export const LauncherWidget = GObject.registerClass(
             result.activate?.();
         }
 
+        // Activate the currently selected result. Shared by the keyboard
+        // 'key-press-event' path (Shell ≤50) and the 'activate' path (Shell 51),
+        // since GNOME 51 no longer delivers Enter to key-press-event handlers.
+        _activateSelection(ctrl) {
+            const result = this._results[this._activeIndex];
+            if (!result) return;
+            if (ctrl && result.activateAlt) {
+                result.activateAlt();
+                if (result.activateAltKeepOpen) {
+                    // Refresh results in place instead of closing
+                    this._runQuery(this._entry.get_text());
+                    return;
+                }
+            } else if (!ctrl && result.activateFill !== undefined) {
+                // Fill search entry with result (e.g. calculator chaining)
+                this._history?.record(result.id);
+                result.activate?.();
+                this._entry.set_text(result.activateFill);
+                if (this._debounceId) {
+                    GLib.source_remove(this._debounceId);
+                    this._debounceId = null;
+                }
+                this._runQuery(result.activateFill);
+                return;
+            } else {
+                this._activateResult(result);
+                if (result.activateKeepOpen) {
+                    // Keep the launcher open and re-render (e.g. a power
+                    // action arming its Enter-to-confirm step).
+                    this._runQuery(this._entry.get_text());
+                    return;
+                }
+            }
+            this._closeAfterActivation();
+        }
+
+        // 'activate' fires on Enter across Shell 45–51. On Shell ≤50 the
+        // 'key-press-event' Return case already ran (and set _lastEnterTime),
+        // so skip to avoid a double activation; on Shell 51 only this fires.
+        _onEntryActivate() {
+            const now = GLib.get_monotonic_time();
+            if (this._lastEnterTime && now - this._lastEnterTime < 200000) // 200 ms
+                return;
+            const event = Clutter.get_current_event();
+            const ctrl = event
+                ? (event.get_state() & Clutter.ModifierType.CONTROL_MASK) !== 0
+                : false;
+            this._activateSelection(ctrl);
+        }
+
         _closeAfterActivation() {
             this._didActivate = true;
             this.emit('close');
@@ -1053,40 +1109,13 @@ export const LauncherWidget = GObject.registerClass(
                 this._setActiveIndex(this._activeIndex + 1);
                 return Clutter.EVENT_STOP;
             case Clutter.KEY_Return:
-            case Clutter.KEY_KP_Enter: {
-                const result = this._results[this._activeIndex];
-                if (result) {
-                    if (ctrl && result.activateAlt) {
-                        result.activateAlt();
-                        if (result.activateAltKeepOpen) {
-                            // Refresh results in place instead of closing
-                            this._runQuery(this._entry.get_text());
-                            return Clutter.EVENT_STOP;
-                        }
-                    } else if (!ctrl && result.activateFill !== undefined) {
-                        // Fill search entry with result (e.g. calculator chaining)
-                        this._history?.record(result.id);
-                        result.activate?.();
-                        this._entry.set_text(result.activateFill);
-                        if (this._debounceId) {
-                            GLib.source_remove(this._debounceId);
-                            this._debounceId = null;
-                        }
-                        this._runQuery(result.activateFill);
-                        return Clutter.EVENT_STOP;
-                    } else {
-                        this._activateResult(result);
-                        if (result.activateKeepOpen) {
-                            // Keep the launcher open and re-render (e.g. a power
-                            // action arming its Enter-to-confirm step).
-                            this._runQuery(this._entry.get_text());
-                            return Clutter.EVENT_STOP;
-                        }
-                    }
-                    this._closeAfterActivation();
-                }
+            case Clutter.KEY_KP_Enter:
+                // On Shell ≤50 this path still fires for Enter; record the time
+                // so the 'activate' handler doesn't re-activate the same press.
+                // On Shell 51 this case never runs — 'activate' handles Enter.
+                this._lastEnterTime = GLib.get_monotonic_time();
+                this._activateSelection(ctrl);
                 return Clutter.EVENT_STOP;
-            }
             case Clutter.KEY_Tab:
                 this._cycleMode();
                 return Clutter.EVENT_STOP;

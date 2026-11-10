@@ -1,6 +1,10 @@
 # Changelog
 
-## v87 (current)
+## v88 (current)
+
+- **Fix:** Enter/Return stopped activating results on GNOME Shell 51. Shell 51 routes key events through Clutter controllers, so the search entry's `clutter_text` `key-press-event` handler no longer receives the Return key (other keys such as Up/Down/Esc/Tab still arrive). Enter is now also handled via the `clutter_text` `activate` signal, which fires on Enter across Shell 45–51, with a monotonic-time guard against double activation on older shells where both paths fire
+
+## v87
 
 - **Fix:** declare GNOME Shell 51 support. `metadata.json` listed 45–50, so Shell 51 (Fedora 45) treated the extension as incompatible and refused to load it. The GNOME 51 extension porting guide lists no breaking changes affecting this code
 
